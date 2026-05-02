@@ -3,28 +3,27 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const TRANSFORM_PROMPT = `You are a professional landscape designer creating a before-and-after visualization for a landscaping company. I am giving you a photo of a residential property. Generate a clearly improved version of this exact photo with realistic, professional landscaping upgrades.
+const TRANSFORM_PROMPT = `You are an expert landscape architect and designer with 20 years of experience. I am giving you a photo of a residential property. Your job is to redesign the landscaping of this exact home.
 
-KEEP THESE EXACTLY THE SAME — do not alter at all:
-- The house structure, brick, siding, roof, chimney, windows, doors
-- The driveway and all paved surfaces
-- All existing mature trees — same position, same size, same shape
-- All fences and permanent structures
-- Parked cars and objects in the scene
-- The camera angle and perspective
+Keep the following exactly the same:
+- The house structure, walls, roof, windows, doors
+- The driveway if there is one
+- Any fences or permanent structures
+- All existing trees — keep every tree exactly where it is, same size, same shape. Do NOT add any new trees.
+- The perspective and camera angle of the photo
 
-MAKE THESE CLEARLY VISIBLE IMPROVEMENTS to the landscaping:
-- Transform any thin, patchy, or dull grass into a lush, thick, vibrant green lawn — this should be a very noticeable improvement
-- Add full, well-defined garden beds along the house foundation filled with dark fresh mulch
-- Plant colorful low-maintenance flowers in the beds — black-eyed susans, knockout roses, purple salvia, and ornamental grasses appropriate for Pittsburgh Pennsylvania zone 6b
-- Make all bed edges crisp and clean with sharp definition between lawn and beds
-- Trim and shape any existing shrubs into neat, manicured forms
-- Do NOT add any new trees of any kind
-- Add color and vibrancy — the transformation should be clearly visible and impressive
+Only change and improve the landscaping. Make these realistic improvements:
+- Replace any dead, patchy, or overgrown grass with a thick lush green lawn
+- Add clean defined garden beds along the foundation of the house
+- Plant low maintenance flowers and shrubs that thrive in Pittsburgh Pennsylvania zone 6b climate such as black eyed susans, knockout roses, ornamental grasses, and boxwoods
+- Add clean mulch to all garden beds
+- If there is a walkway make it clean and defined with stone or brick edging
+- Trim and shape any existing shrubs that are kept
+- Make it look like a professional landscaping crew just finished the job
 
-The result must look like a real photograph — photorealistic, not a painting. The house should be instantly recognizable as the same house. The landscaping transformation should be dramatic enough that anyone can see the difference between before and after.
+The final image should look like a realistic photograph, not a painting or illustration. It should look achievable and buildable by a real landscaping company. The transformation should be impressive but not fantasy — a realistic high end residential landscape job.
 
-After the image, write 2 sentences describing the key improvements. Be specific and inspiring — no intro phrases.`;
+After the image, write 2-3 sentences describing the key landscaping changes made. Be specific and inspiring — no intro phrases, just describe the improvements directly.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
@@ -54,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // gemini-2.5-flash-image accepts image input and outputs both image + text in one call
     const response = await genai.models.generateContent({
-      model: "gemini-3.1-flash-image-preview",
+      model: "gemini-2.5-flash-image",
       contents: [
         {
           role: "user",
