@@ -70,7 +70,7 @@ function buildImagePrompt(designContext: string): string {
 
 async function generateTextReport(prompt: string): Promise<string> {
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { systemInstruction: SYSTEM_PROMPT },
   });
@@ -79,7 +79,7 @@ async function generateTextReport(prompt: string): Promise<string> {
 
 async function generateTextReportFromImage(base64: string, mimeType: string): Promise<string> {
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: [
       {
         role: "user",
