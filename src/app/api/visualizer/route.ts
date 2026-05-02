@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, RawReferenceImage } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const TRANSFORM_PROMPT = `You are a professional landscape designer. The user has uploaded a photo of their home. Generate a realistic transformed version of this exact same photo showing a beautifully redesigned landscape. Keep the house and structure identical - only change the landscaping. Add lush green grass, manicured garden beds, blooming flowers appropriate for Pittsburgh Pennsylvania climate, a clean stone or brick walkway, trimmed hedges, and mature trees where appropriate. The result should look like a realistic before and after photo - not a drawing or illustration. Realistic, achievable, and something a landscaping company could actually build.
+const EDIT_PROMPT = `Transform only the landscaping of this exact home. Keep the house, driveway, and all structures completely identical — do not alter the building at all. Replace the existing landscaping with: lush manicured green lawn, full garden beds with blooming flowers appropriate for Pittsburgh Pennsylvania (coneflowers, black-eyed susans, ornamental grasses, hydrangeas), a clean stone or brick walkway leading to the front door, neatly trimmed hedges along the foundation, and mature shade trees in appropriate locations. The result must look like a realistic professional landscaping renovation photo of this same property — photorealistic, not a drawing or illustration.`;
 
-After the image, write 2-3 sentences describing the key changes made and why they enhance the property. Keep it concise and inspiring.`;
+const DESCRIPTION_PROMPT = `You are a landscape designer. In 2-3 sentences, describe what landscaping improvements were made to a Pittsburgh Pennsylvania home: new lawn, garden beds with native flowers, stone walkway, trimmed hedges, and shade trees. Be specific and inspiring. No intro phrases like "In this redesign" — just describe the improvements directly.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
@@ -33,39 +33,31 @@ export async function POST(req: NextRequest) {
 
     const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
 
-    const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { inlineData: { mimeType: imageFile.type, data: base64 } },
-            { text: TRANSFORM_PROMPT },
-          ],
-        },
-      ],
-      config: {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-      },
+    // Use Imagen's editImage — takes the actual photo as a reference and edits only what the prompt specifies
+    const refImage = new RawReferenceImage();
+    refImage.referenceId = 1;
+    refImage.referenceImage = { imageBytes: base64, mimeType: imageFile.type };
+
+    const editResponse = await genai.models.editImage({
+      model: "imagen-3.0-capability-001",
+      prompt: EDIT_PROMPT,
+      referenceImages: [refImage],
+      config: { numberOfImages: 1 },
     });
 
-    const parts = response.candidates?.[0]?.content?.parts ?? [];
-
-    let imageBase64: string | null = null;
-    let mimeType = "image/jpeg";
-    let description = "";
-
-    for (const part of parts) {
-      if ((part as { inlineData?: { data?: string; mimeType?: string } }).inlineData?.data) {
-        const id = (part as { inlineData: { data: string; mimeType?: string } }).inlineData;
-        imageBase64 = id.data;
-        mimeType = id.mimeType ?? "image/jpeg";
-      } else if (part.text) {
-        description += part.text;
-      }
+    const imageBase64 = editResponse.generatedImages?.[0]?.image?.imageBytes ?? null;
+    if (!imageBase64) {
+      return NextResponse.json({ error: "Image editing returned no result. Please try again." }, { status: 500 });
     }
 
-    return NextResponse.json({ imageBase64, mimeType, description });
+    // Generate a short description with Gemini text
+    const descResponse = await genai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: DESCRIPTION_PROMPT }] }],
+    });
+    const description = descResponse.text ?? "";
+
+    return NextResponse.json({ imageBase64, mimeType: "image/png", description });
   } catch (err) {
     console.error("Visualizer error:", err);
     const msg = err instanceof Error ? err.message : "Failed to generate design.";

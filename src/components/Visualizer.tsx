@@ -135,7 +135,7 @@ export default function Visualizer() {
                   src={imagePreview}
                   alt="Your property"
                   className="w-full object-cover"
-                  style={{ maxHeight: "420px" }}
+                  style={{ maxHeight: "520px" }}
                 />
               ) : (
                 <div className="py-20 text-center">
@@ -192,33 +192,33 @@ export default function Visualizer() {
         {result && !loading && (
           <div>
             {/* Before / After grid */}
-            <div className="grid md:grid-cols-2 gap-4 mb-8">
+            <div className="grid md:grid-cols-2 gap-2 mb-8">
 
               {/* Before */}
               <div className="relative">
-                <div className="absolute top-4 left-4 z-10 bg-forest-950/80 backdrop-blur-sm px-4 py-1.5">
-                  <span className="text-white text-[11px] tracking-[0.3em] uppercase font-sans font-medium">Before</span>
+                <div className="absolute top-5 left-5 z-10 bg-forest-950/85 backdrop-blur-sm px-5 py-2">
+                  <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">Before</span>
                 </div>
                 {imagePreview && (
                   <img
                     src={imagePreview}
                     alt="Original property"
                     className="w-full object-cover"
-                    style={{ height: "420px" }}
+                    style={{ height: "580px" }}
                   />
                 )}
               </div>
 
               {/* After */}
               <div className="relative">
-                <div className="absolute top-4 left-4 z-10 bg-forest-700/90 backdrop-blur-sm px-4 py-1.5">
-                  <span className="text-white text-[11px] tracking-[0.3em] uppercase font-sans font-medium">After Your K&amp;M Redesign</span>
+                <div className="absolute top-5 left-5 z-10 bg-forest-600/90 backdrop-blur-sm px-5 py-2">
+                  <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">After Your K&amp;M Redesign</span>
                 </div>
                 <img
                   src={`data:${result.mimeType};base64,${result.imageBase64}`}
                   alt="AI-generated landscape redesign"
                   className="w-full object-cover"
-                  style={{ height: "420px" }}
+                  style={{ height: "580px" }}
                 />
               </div>
             </div>
