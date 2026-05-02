@@ -151,7 +151,7 @@ export default function Visualizer() {
           <div className="inline-flex items-center gap-2 mb-5 bg-forest-800/60 border border-forest-700/50 px-5 py-2">
             <Sparkles className="w-4 h-4 text-forest-400" />
             <span className="text-forest-400 text-[11px] tracking-[0.3em] uppercase font-sans font-medium">
-              Claude AI · Gemini Imagen
+              Gemini AI · Gemini Imagen
             </span>
           </div>
           <h2
@@ -340,7 +340,7 @@ export default function Visualizer() {
               <h3 className="font-display text-xl text-white">Design Report</h3>
             </div>
             <p className="text-white/30 text-[11px] tracking-wider uppercase font-sans mb-4">
-              Claude AI
+              Gemini AI
             </p>
 
             {!result && !loading && (
