@@ -195,30 +195,28 @@ export default function Visualizer() {
             <div className="grid md:grid-cols-2 gap-2 mb-8">
 
               {/* Before */}
-              <div className="relative">
-                <div className="absolute top-5 left-5 z-10 bg-forest-950/85 backdrop-blur-sm px-5 py-2">
+              <div className="relative bg-black">
+                <div className="absolute top-4 left-4 z-10 bg-forest-950/85 backdrop-blur-sm px-5 py-2">
                   <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">Before</span>
                 </div>
                 {imagePreview && (
                   <img
                     src={imagePreview}
                     alt="Original property"
-                    className="w-full object-cover"
-                    style={{ height: "580px" }}
+                    className="w-full h-auto block"
                   />
                 )}
               </div>
 
               {/* After */}
-              <div className="relative">
-                <div className="absolute top-5 left-5 z-10 bg-forest-600/90 backdrop-blur-sm px-5 py-2">
+              <div className="relative bg-black">
+                <div className="absolute top-4 left-4 z-10 bg-forest-600/90 backdrop-blur-sm px-5 py-2">
                   <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">After Your K&amp;M Redesign</span>
                 </div>
                 <img
                   src={`data:${result.mimeType};base64,${result.imageBase64}`}
                   alt="AI-generated landscape redesign"
-                  className="w-full object-cover"
-                  style={{ height: "580px" }}
+                  className="w-full h-auto block"
                 />
               </div>
             </div>
