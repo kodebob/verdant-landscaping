@@ -21,6 +21,7 @@ ONLY make these small realistic improvements:
 - Add a small amount of low growing flowers along the foundation only where there is already a garden bed
 - Clean up any visible weeds or debris
 - Make the edges between the lawn and garden beds look crisp and defined
+- Do NOT add any new trees — keep every existing tree exactly where it is, same size and shape. Do not plant any new trees at all.
 
 The final result should look like the same photo on a better day after a professional cleanup. Subtle. Realistic. The homeowner should look at it and think this is actually achievable. Do not add anything that was not already suggested by the existing landscape.
 
