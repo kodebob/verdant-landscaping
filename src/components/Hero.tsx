@@ -10,9 +10,9 @@ const VIDEOS = [
   "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/9477579-uhd_3840_2160_24fps.mp4",
 ];
 
-const PLAY_DURATION = 9000;  // longer play gives heavy videos more buffer time
+const PLAY_DURATION = 5500;  // how long each clip plays
 const FADE_DURATION = 1200;
-const PRELOAD_AHEAD = 5000; // start loading next video 5s before transition
+const PRELOAD_AHEAD = 2500; // start loading next video 2.5s before transition
 
 export default function Hero() {
   const [currentIdx, setCurrentIdx] = useState(0);
