@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const genai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const SYSTEM_PROMPT = `You are a world-class landscape designer with 20+ years of experience transforming residential properties across the country. Your expertise spans horticulture, hardscaping, sustainable landscaping, irrigation design, and outdoor living spaces.
 
@@ -97,9 +97,9 @@ async function generateTextReportFromImage(base64: string, mimeType: string): Pr
 }
 
 export async function POST(req: NextRequest) {
-  if (!process.env.GOOGLE_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
-      { error: "GOOGLE_API_KEY not configured." },
+      { error: "GEMINI_API_KEY not configured." },
       { status: 500 }
     );
   }
