@@ -5,10 +5,14 @@ import { useState, useEffect, useRef } from "react";
 const VIDEOS = [
   "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/4544137-hd_1920_1080_30fps.mp4",
   "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/17045602-hd_1920_1080_50fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/15473106_1080_1920_30fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/15634486_3840_2160_60fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/9477579-uhd_3840_2160_24fps.mp4",
 ];
 
-const PLAY_DURATION = 6000;  // how long each clip plays
-const FADE_DURATION = 1200;  // crossfade duration in ms
+const PLAY_DURATION = 9000;  // longer play gives heavy videos more buffer time
+const FADE_DURATION = 1200;
+const PRELOAD_AHEAD = 5000; // start loading next video 5s before transition
 
 export default function Hero() {
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -18,57 +22,56 @@ export default function Hero() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preloadRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Advance to the next clip
   const advance = (from: number) => {
     const next = (from + 1) % VIDEOS.length;
     const afterNext = (from + 2) % VIDEOS.length;
-
-    // Pre-roll the incoming video so it's ready
     const incoming = videoRefs.current[next];
-    if (incoming) {
-      incoming.currentTime = 0;
-      incoming.play().catch(() => {});
+
+    const doTransition = () => {
+      setNextIdx(next);
+      setTransitioning(true);
+      incoming?.play().catch(() => {});
+
+      setTimeout(() => {
+        const outgoing = videoRefs.current[from];
+        if (outgoing) { outgoing.pause(); outgoing.currentTime = 0; }
+        setCurrentIdx(next);
+        setTransitioning(false);
+
+        // Start loading the one after next only after transition completes
+        const queued = videoRefs.current[afterNext];
+        if (queued && queued.preload === "none") queued.load();
+      }, FADE_DURATION);
+    };
+
+    if (!incoming) { doTransition(); return; }
+
+    incoming.currentTime = 0;
+
+    // Wait until the browser has buffered enough to play smoothly
+    if (incoming.readyState >= 3) {
+      doTransition();
+    } else {
+      incoming.load();
+      incoming.addEventListener("canplay", doTransition, { once: true });
     }
-
-    // Crossfade
-    setNextIdx(next);
-    setTransitioning(true);
-
-    setTimeout(() => {
-      // Outgoing video: pause and reset
-      const outgoing = videoRefs.current[from];
-      if (outgoing) {
-        outgoing.pause();
-        outgoing.currentTime = 0;
-      }
-      setCurrentIdx(next);
-      setTransitioning(false);
-
-      // Queue the one after next so it's ready
-      const queued = videoRefs.current[afterNext];
-      if (queued) queued.load();
-    }, FADE_DURATION);
   };
 
-  // Kick off the rotation timer whenever currentIdx settles
   useEffect(() => {
-    // Play current video
     const current = videoRefs.current[currentIdx];
     if (current) {
       current.currentTime = 0;
       current.play().catch(() => {});
     }
 
-    // Pre-load the next one a second early
+    // Begin loading next video well ahead of transition
     preloadRef.current = setTimeout(() => {
       const next = (currentIdx + 1) % VIDEOS.length;
-      videoRefs.current[next]?.load();
-    }, PLAY_DURATION - 1000);
+      const el = videoRefs.current[next];
+      if (el && el.readyState === 0) el.load();
+    }, PLAY_DURATION - PRELOAD_AHEAD);
 
-    // Schedule the crossfade
-    timerRef.current = setTimeout(() => {
-      advance(currentIdx);
-    }, PLAY_DURATION);
+    timerRef.current = setTimeout(() => advance(currentIdx), PLAY_DURATION);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -106,7 +109,7 @@ export default function Hero() {
             src={src}
             muted
             playsInline
-            preload={i === 0 || i === 1 ? "auto" : "none"}
+            preload={i === 0 ? "auto" : "none"}
             className="absolute inset-0 w-full h-full object-cover"
             style={{
               opacity: isNext ? 1 : isCurrent ? (transitioning ? 0 : 1) : 0,
