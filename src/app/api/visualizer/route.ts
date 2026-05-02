@@ -3,31 +3,22 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const TRANSFORM_PROMPT = `You are an expert landscape architect and designer with 20 years of experience. I am giving you a photo of a residential property. Your job is to redesign the landscaping of this exact home.
+const TRANSFORM_PROMPT = `I am giving you a photo of a residential home. Make ONLY these two types of changes — nothing else:
 
-Keep the following exactly the same — do NOT remove, move, or alter any of these:
-- The house structure, walls, roof, windows, doors
-- The driveway and all paved surfaces
-- Every fence, railing, post, and gate — keep them exactly as they are
-- All existing trees — keep every tree exactly where it is, same size, same shape. Do NOT add any new trees.
-- All parked cars and objects in the scene
-- Any permanent structures, utility poles, mailboxes, lampposts
-- The perspective and camera angle of the photo
+1. Make the grass look greener and fuller
+2. Add colorful flowers and fresh dark mulch to garden beds that already exist near the foundation
 
-Never remove anything that exists in the original photo. Only add or improve — never subtract.
+DO NOT change anything else. Specifically:
+- Do NOT move, remove, or alter the fence in any way
+- Do NOT change the walkway, driveway, or any paved surface
+- Do NOT alter the house, roof, windows, doors, or any structure
+- Do NOT remove or move any trees, shrubs, or cars
+- Do NOT add new trees, new pathways, or new structures
+- Do NOT change the camera angle or perspective
 
-Only change and improve the landscaping. Make these realistic improvements:
-- Replace any dead, patchy, or overgrown grass with a thick lush green lawn
-- Add clean defined garden beds along the foundation of the house
-- Plant low maintenance flowers and shrubs that thrive in Pittsburgh Pennsylvania zone 6b climate such as black eyed susans, knockout roses, ornamental grasses, and boxwoods
-- Add clean mulch to all garden beds
-- If there is a walkway make it clean and defined with stone or brick edging
-- Trim and shape any existing shrubs that are kept
-- Make it look like a professional landscaping crew just finished the job
+The result should look almost identical to the original photo — just with greener grass and a bit more color in the existing flower beds. Photorealistic. Subtle. Like someone watered the lawn and planted a few flowers.
 
-The final image should look like a realistic photograph, not a painting or illustration. It should look achievable and buildable by a real landscaping company. The transformation should be impressive but not fantasy — a realistic high end residential landscape job.
-
-After the image, write 2-3 sentences describing the key landscaping changes made. Be specific and inspiring — no intro phrases, just describe the improvements directly.`;
+After the image, write 1-2 sentences describing only what was improved.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
