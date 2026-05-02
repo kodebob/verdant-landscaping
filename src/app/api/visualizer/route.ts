@@ -3,68 +3,58 @@ import { GoogleGenAI } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const SYSTEM_PROMPT = `You are a world-class landscape designer with 20+ years of experience transforming residential properties across the country. Your expertise spans horticulture, hardscaping, sustainable landscaping, irrigation design, and outdoor living spaces.
+const SYSTEM_PROMPT = `You are a professional landscape designer. When given a property photo or address, write a concise landscape design report using these four sections:
 
-When presented with a photo or description of a property, provide a detailed, professional landscape design report. Structure your response with these exact sections using markdown headers:
+# Design Vision
+2 sentences on your overall concept for the space.
 
-# Landscape Design Vision
+## Plant Palette
+4-5 plants with common name, botanical name, and one care tip each.
 
-A compelling 2-3 sentence overview of your design philosophy for this specific space.
+## Key Improvements
+3-4 bullet points covering the most impactful hardscape, structural, or layout changes.
 
-## Current Assessment
+## Investment Guide
+- Quick wins (under $3k)
+- Core redesign ($3k–$15k)
+- Premium additions ($15k+)
 
-What you observe about the existing space — its strengths, challenges, and untapped potential.
-
-## Recommended Plant Palette
-
-List 5-7 specific plants with their common and botanical names, plus a brief care note for each. Choose plants appropriate to the region and design aesthetic.
-
-## Hardscape & Structural Elements
-
-Specific recommendations for patios, pathways, walls, pergolas, water features, or outdoor structures that would elevate this space.
-
-## Seasonal Interest
-
-How the landscape will perform and look across spring, summer, fall, and winter — ensuring year-round beauty.
-
-## Sustainability & Eco Features
-
-Native plants, rain gardens, permeable surfaces, composting, or other eco-conscious recommendations appropriate for this property.
-
-## Investment & Phasing
-
-Phase 1 (Quick wins, under $5k), Phase 2 (Core design, $5k-$20k), Phase 3 (Premium additions, $20k+). Realistic cost ranges and timeframes.
-
-## Your First Three Steps
-
-Three specific, actionable steps the homeowner should take immediately to begin the transformation.
-
----
-
-Keep your tone professional yet warm and inspiring. Use specific plant names, materials, and design terms. Make the homeowner excited about their landscape's potential.`;
+Keep the entire report under 400 words. Be specific, practical, and inspiring.`;
 
 async function generateLandscapeImage(designPrompt: string): Promise<string | null> {
+  // Try Gemini native image generation
+  try {
+    const response = await genai.models.generateContent({
+      model: "gemini-2.0-flash-exp",
+      contents: [{ role: "user", parts: [{ text: designPrompt }] }],
+      config: { responseModalities: ["IMAGE"] } as object,
+    });
+
+    const parts = response.candidates?.[0]?.content?.parts ?? [];
+    for (const part of parts as Array<{ inlineData?: { data?: string } }>) {
+      if (part.inlineData?.data) return part.inlineData.data;
+    }
+  } catch (err) {
+    console.error("Gemini native image gen error:", err);
+  }
+
+  // Fallback: try Imagen
   try {
     const response = await genai.models.generateImages({
       model: "imagen-3.0-generate-002",
       prompt: designPrompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: "16:9",
-        outputMimeType: "image/jpeg",
-      },
+      config: { numberOfImages: 1, aspectRatio: "16:9", outputMimeType: "image/jpeg" },
     });
-
     const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
     return imageBytes ?? null;
   } catch (err) {
-    console.error("Gemini image generation error:", err);
+    console.error("Imagen error:", err);
     return null;
   }
 }
 
 function buildImagePrompt(designContext: string): string {
-  const lines = designContext.split("\n").slice(0, 20).join(" ");
+  const lines = designContext.split("\n").slice(0, 10).join(" ");
   return `Photorealistic professional landscape architecture render of a beautifully redesigned residential property exterior. ${lines}. Lush healthy lawn, mature plantings, elegant hardscape. Bright natural daylight, ultra high quality landscape photography, no people, no text, no watermarks.`;
 }
 
@@ -85,9 +75,7 @@ async function generateTextReportFromImage(base64: string, mimeType: string): Pr
         role: "user",
         parts: [
           { inlineData: { mimeType, data: base64 } },
-          {
-            text: "Please analyze this photo of my property and provide a comprehensive landscape design report. Describe exactly what you see, identify the key opportunities and challenges, then craft your full design vision for transforming this outdoor space.",
-          },
+          { text: "Analyze this property photo and write a concise landscape design report." },
         ],
       },
     ],
@@ -98,16 +86,12 @@ async function generateTextReportFromImage(base64: string, mimeType: string): Pr
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json(
-      { error: "GEMINI_API_KEY not configured." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
   try {
     const contentType = req.headers.get("content-type") || "";
 
-    // ── Address-based ──────────────────────────────────────────────
     if (contentType.includes("application/json")) {
       const body = await req.json();
       const address = (body.address as string)?.trim();
@@ -115,25 +99,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Address is required." }, { status: 400 });
       }
 
-      const prompt = `Please create a detailed landscape design report for the property at: ${address}
-
-Base your analysis on:
-- The climate zone, USDA hardiness zone, and typical weather patterns for this region
-- Architectural styles and home types common to this area
-- Native and regionally well-adapted plants
-- Local soil conditions and water considerations
-- Landscaping trends and preferences for this market
-
-Craft a comprehensive design vision as if this were a paid proposal for the homeowner.`;
+      const prompt = `Write a concise landscape design report for the property at: ${address}. Base plant and design recommendations on the region's climate, hardiness zone, native species, and typical home styles.`;
 
       const report = await generateTextReport(prompt);
-      const imagePrompt = buildImagePrompt(`Residential property at ${address}. ${report}`);
-      const imageBase64 = await generateLandscapeImage(imagePrompt);
+      const imageBase64 = await generateLandscapeImage(buildImagePrompt(`Property at ${address}. ${report}`));
 
       return NextResponse.json({ report, imageBase64 });
     }
 
-    // ── Photo-based ────────────────────────────────────────────────
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const imageFile = formData.get("image") as File | null;
@@ -141,27 +114,16 @@ Craft a comprehensive design vision as if this were a paid proposal for the home
       if (!imageFile) {
         return NextResponse.json({ error: "Image file is required." }, { status: 400 });
       }
-
-      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-      if (!allowedTypes.includes(imageFile.type)) {
-        return NextResponse.json(
-          { error: "Unsupported image format. Please upload JPG, PNG, or WEBP." },
-          { status: 400 }
-        );
+      if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(imageFile.type)) {
+        return NextResponse.json({ error: "Unsupported format. Upload JPG, PNG, or WEBP." }, { status: 400 });
       }
       if (imageFile.size > 20 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: "Image is too large. Please upload an image under 20MB." },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Image too large. Max 20MB." }, { status: 400 });
       }
 
-      const arrayBuffer = await imageFile.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-
+      const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
       const report = await generateTextReportFromImage(base64, imageFile.type);
-      const imagePrompt = buildImagePrompt(report);
-      const imageBase64 = await generateLandscapeImage(imagePrompt);
+      const imageBase64 = await generateLandscapeImage(buildImagePrompt(report));
 
       return NextResponse.json({ report, imageBase64 });
     }
