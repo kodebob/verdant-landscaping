@@ -3,22 +3,26 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const TRANSFORM_PROMPT = `I am giving you a photo of a residential home. Make ONLY these two types of changes — nothing else:
+const TRANSFORM_PROMPT = `I am giving you a photo of a residential home. Your goal is maximum curb appeal while keeping the property 100% recognizable. Think: this home just won yard of the month.
 
-1. Make the grass look greener and fuller
-2. Add colorful flowers and fresh dark mulch to garden beds that already exist near the foundation
+NEVER change these — they must be pixel-perfect identical:
+- Every fence, post, railing, and gate — do not touch
+- The walkway, driveway, and all paved surfaces — do not change
+- The house structure, brick, siding, roof, chimney, windows, doors
+- All existing trees — same position, same size, same shape
+- Parked cars and any objects in the scene
+- The camera angle and perspective
 
-DO NOT change anything else. Specifically:
-- Do NOT move, remove, or alter the fence in any way
-- Do NOT change the walkway, driveway, or any paved surface
-- Do NOT alter the house, roof, windows, doors, or any structure
-- Do NOT remove or move any trees, shrubs, or cars
-- Do NOT add new trees, new pathways, or new structures
-- Do NOT change the camera angle or perspective
+IMPROVE only the soft landscaping to achieve stunning curb appeal:
+- Make the lawn thick, lush, and deeply green — the best lawn on the street
+- Fill all existing garden beds with rich dark mulch and plant them full of colorful seasonal flowers — black-eyed susans, knockout roses, purple coneflowers, ornamental grasses layered for depth and color
+- Make the edges between the lawn and beds razor sharp and defined
+- Trim and shape all existing shrubs into clean, manicured forms
+- Add seasonal color and visual richness without adding any new structures or trees
 
-The result should look almost identical to the original photo — just with greener grass and a bit more color in the existing flower beds. Photorealistic. Subtle. Like someone watered the lawn and planted a few flowers.
+The photo must look photorealistic — like a professional real estate photo taken on a perfect summer day after a master landscaping crew finished. The house must be immediately recognizable as the same house. Stunning but achievable.
 
-After the image, write 1-2 sentences describing only what was improved.`;
+After the image, write 2 sentences describing the improvements. Be vivid and inspiring — no intro phrases.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
