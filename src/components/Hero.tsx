@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 
-// Videos in public/landscape photos/ — space encoded as %20
 const VIDEOS = [
-  "/landscape%20photos/4544137-hd_1920_1080_30fps.mp4",
-  "/landscape%20photos/17045602-hd_1920_1080_50fps.mp4",
-  "/landscape%20photos/15473106_1080_1920_30fps.mp4",
-  "/landscape%20photos/15634486_3840_2160_60fps.mp4",
-  "/landscape%20photos/9477579-uhd_3840_2160_24fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/4544137-hd_1920_1080_30fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/17045602-hd_1920_1080_50fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/15473106_1080_1920_30fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/15634486_3840_2160_60fps.mp4",
+  "https://trbxniwzpsf1hxso.public.blob.vercel-storage.com/9477579-uhd_3840_2160_24fps.mp4",
 ];
 
 const PLAY_DURATION = 6000;  // how long each clip plays
