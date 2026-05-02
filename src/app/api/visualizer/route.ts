@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const TRANSFORM_PROMPT = `You are a professional landscape designer. The user has uploaded a photo of their home. Generate a realistic transformed version of this exact same photo showing a beautifully redesigned landscape. Keep the house and structure identical - only change the landscaping. Add lush green grass, manicured garden beds, blooming flowers appropriate for Pittsburgh Pennsylvania climate, a clean stone or brick walkway, trimmed hedges, and mature trees where appropriate. The result should look like a realistic before and after photo - not a drawing or illustration. Realistic, achievable, and something a landscaping company could actually build.
+
+After the image, write 2-3 sentences describing the key landscaping changes made. Be specific and inspiring — no intro phrases, just describe the improvements directly.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
@@ -29,63 +33,44 @@ export async function POST(req: NextRequest) {
 
     const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
 
-    // Step 1 — Gemini analyzes the photo and describes the house in precise detail
-    const analysisResponse = await genai.models.generateContent({
-      model: "gemini-2.5-flash",
+    // gemini-2.5-flash-image accepts image input and outputs both image + text in one call
+    const response = await genai.models.generateContent({
+      model: "gemini-2.5-flash-image",
       contents: [
         {
           role: "user",
           parts: [
             { inlineData: { mimeType: imageFile.type, data: base64 } },
-            {
-              text: `Describe this home's exterior in precise photographic detail for use in an image generation prompt. Cover:
-- Architectural style (colonial, ranch, craftsman, etc.)
-- Number of stories
-- Exterior material and exact color (brick color, siding color, stone type)
-- Roof style and color
-- Window style, trim color, and shutter color if present
-- Garage (attached/detached, number of doors, color)
-- Driveway material and layout
-- Current landscaping condition
-- Time of day and lighting in the photo
-- Surrounding environment (suburban street, trees nearby, etc.)
-
-Be very specific with colors. Output only the description — no intro or explanation.`,
-            },
+            { text: TRANSFORM_PROMPT },
           ],
         },
       ],
+      config: {
+        responseModalities: [Modality.IMAGE, Modality.TEXT],
+      },
     });
 
-    const houseDescription = analysisResponse.text ?? "";
+    const parts = response.candidates?.[0]?.content?.parts ?? [];
 
-    // Step 2 — Generate transformed landscape using Imagen 4 with the detailed house description
-    const imagePrompt = `Photorealistic exterior photo of a ${houseDescription}. The landscaping has been professionally redesigned: lush manicured green lawn, full garden beds with blooming flowers for Pittsburgh Pennsylvania climate (coneflowers, black-eyed susans, ornamental grasses, hydrangeas, boxwoods), a clean natural stone walkway leading to the front door, neatly trimmed foundation hedges, and mature shade trees framing the property. Same lighting and perspective as the original photo. Ultra-realistic landscape photography quality, no people, no text, no watermarks.`;
+    let imageBase64: string | null = null;
+    let mimeType = "image/jpeg";
+    let description = "";
 
-    const imageResponse = await genai.models.generateImages({
-      model: "imagen-4.0-generate-001",
-      prompt: imagePrompt,
-      config: { numberOfImages: 1, aspectRatio: "16:9" },
-    });
-
-    const imageBase64 = imageResponse.generatedImages?.[0]?.image?.imageBytes ?? null;
-    if (!imageBase64) {
-      return NextResponse.json({ error: "Image generation returned no result. Please try again." }, { status: 500 });
+    for (const part of parts) {
+      const p = part as { inlineData?: { data?: string; mimeType?: string }; text?: string };
+      if (p.inlineData?.data) {
+        imageBase64 = p.inlineData.data;
+        mimeType = p.inlineData.mimeType ?? "image/jpeg";
+      } else if (p.text) {
+        description += p.text;
+      }
     }
 
-    // Step 3 — Short inspiring description of what changed
-    const descResponse = await genai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `Write 2 sentences describing a professional landscape transformation for a Pittsburgh Pennsylvania home. Mention the new lawn, garden beds with native flowers, stone walkway, and mature shade trees. Be specific and inspiring. No intro phrases — start directly with the improvements.` }],
-        },
-      ],
-    });
-    const description = descResponse.text ?? "";
+    if (!imageBase64) {
+      return NextResponse.json({ error: "No image returned. Please try again." }, { status: 500 });
+    }
 
-    return NextResponse.json({ imageBase64, mimeType: "image/jpeg", description });
+    return NextResponse.json({ imageBase64, mimeType, description });
   } catch (err) {
     console.error("Visualizer error:", err);
     const msg = err instanceof Error ? err.message : "Failed to generate design.";
