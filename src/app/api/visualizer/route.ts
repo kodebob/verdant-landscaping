@@ -21,35 +21,19 @@ const SYSTEM_PROMPT = `You are a professional landscape designer. When given a p
 
 Keep the entire report under 400 words. Be specific, practical, and inspiring.`;
 
-async function generateLandscapeImage(designPrompt: string): Promise<string | null> {
-  // Try Gemini native image generation
-  try {
-    const response = await genai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      contents: [{ role: "user", parts: [{ text: designPrompt }] }],
-      config: { responseModalities: ["IMAGE"] } as object,
-    });
-
-    const parts = response.candidates?.[0]?.content?.parts ?? [];
-    for (const part of parts as Array<{ inlineData?: { data?: string } }>) {
-      if (part.inlineData?.data) return part.inlineData.data;
-    }
-  } catch (err) {
-    console.error("Gemini native image gen error:", err);
-  }
-
-  // Fallback: try Imagen
+async function generateLandscapeImage(designPrompt: string): Promise<{ base64: string | null; error: string | null }> {
   try {
     const response = await genai.models.generateImages({
-      model: "imagen-3.0-generate-002",
+      model: "imagen-4.0-generate-001",
       prompt: designPrompt,
-      config: { numberOfImages: 1, aspectRatio: "16:9", outputMimeType: "image/jpeg" },
+      config: { numberOfImages: 1, aspectRatio: "16:9" },
     });
-    const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
-    return imageBytes ?? null;
+    const imageBytes = response.generatedImages?.[0]?.image?.imageBytes ?? null;
+    return { base64: imageBytes, error: imageBytes ? null : "No image returned from Imagen." };
   } catch (err) {
-    console.error("Imagen error:", err);
-    return null;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Imagen error:", msg);
+    return { base64: null, error: msg };
   }
 }
 
@@ -102,9 +86,9 @@ export async function POST(req: NextRequest) {
       const prompt = `Write a concise landscape design report for the property at: ${address}. Base plant and design recommendations on the region's climate, hardiness zone, native species, and typical home styles.`;
 
       const report = await generateTextReport(prompt);
-      const imageBase64 = await generateLandscapeImage(buildImagePrompt(`Property at ${address}. ${report}`));
+      const { base64: imageBase64, error: imageError } = await generateLandscapeImage(buildImagePrompt(`Property at ${address}. ${report}`));
 
-      return NextResponse.json({ report, imageBase64 });
+      return NextResponse.json({ report, imageBase64, imageError });
     }
 
     if (contentType.includes("multipart/form-data")) {
@@ -123,9 +107,9 @@ export async function POST(req: NextRequest) {
 
       const base64 = Buffer.from(await imageFile.arrayBuffer()).toString("base64");
       const report = await generateTextReportFromImage(base64, imageFile.type);
-      const imageBase64 = await generateLandscapeImage(buildImagePrompt(report));
+      const { base64: imageBase64, error: imageError } = await generateLandscapeImage(buildImagePrompt(report));
 
-      return NextResponse.json({ report, imageBase64 });
+      return NextResponse.json({ report, imageBase64, imageError });
     }
 
     return NextResponse.json({ error: "Unsupported request format." }, { status: 400 });

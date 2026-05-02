@@ -16,6 +16,7 @@ type Tab = "photo" | "address";
 interface Result {
   report: string;
   imageBase64: string | null;
+  imageError?: string | null;
 }
 
 function renderReport(text: string): string {
@@ -123,7 +124,7 @@ export default function Visualizer() {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Something went wrong.");
-      setResult({ report: data.report, imageBase64: data.imageBase64 ?? null });
+      setResult({ report: data.report, imageBase64: data.imageBase64 ?? null, imageError: data.imageError ?? null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -325,9 +326,9 @@ export default function Visualizer() {
             )}
 
             {result && !result.imageBase64 && (
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-white/25 text-sm font-sans text-center max-w-xs">
-                  Image generation unavailable — see the design report for details.
+              <div className="flex-1 flex items-center justify-center p-4">
+                <p className="text-white/25 text-xs font-sans text-center max-w-xs break-words">
+                  {result.imageError || "Image generation unavailable."}
                 </p>
               </div>
             )}
