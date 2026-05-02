@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Upload, Sparkles, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Upload, Sparkles, Loader2, AlertCircle, RefreshCw, X, ZoomIn } from "lucide-react";
 
 interface Result {
   imageBase64: string;
@@ -16,7 +16,15 @@ export default function Visualizer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const close = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [lightbox]);
 
   const handleImageSelect = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -195,9 +203,12 @@ export default function Visualizer() {
             <div className="grid md:grid-cols-2 gap-2 mb-8">
 
               {/* Before */}
-              <div className="relative bg-forest-950 flex items-center justify-center" style={{ minHeight: "300px" }}>
+              <div className="relative bg-forest-950 group cursor-zoom-in" style={{ minHeight: "300px" }} onClick={() => imagePreview && setLightbox(imagePreview)}>
                 <div className="absolute top-4 left-4 z-10 bg-forest-950/90 backdrop-blur-sm px-5 py-2">
                   <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">Before</span>
+                </div>
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-2">
+                  <ZoomIn className="w-4 h-4 text-white" />
                 </div>
                 {imagePreview && (
                   <img
@@ -210,9 +221,12 @@ export default function Visualizer() {
               </div>
 
               {/* After */}
-              <div className="relative bg-forest-950 flex items-center justify-center" style={{ minHeight: "300px" }}>
+              <div className="relative bg-forest-950 group cursor-zoom-in" style={{ minHeight: "300px" }} onClick={() => setLightbox(`data:${result.mimeType};base64,${result.imageBase64}`)}>
                 <div className="absolute top-4 left-4 z-10 bg-forest-600/90 backdrop-blur-sm px-5 py-2">
                   <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">After Your K&amp;M Redesign</span>
+                </div>
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-2">
+                  <ZoomIn className="w-4 h-4 text-white" />
                 </div>
                 <img
                   src={`data:${result.mimeType};base64,${result.imageBase64}`}
@@ -252,6 +266,27 @@ export default function Visualizer() {
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white/60 hover:text-white transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img
+            src={lightbox}
+            alt="Enlarged view"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   );
 }

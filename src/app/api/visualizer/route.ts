@@ -5,12 +5,16 @@ const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const TRANSFORM_PROMPT = `You are an expert landscape architect and designer with 20 years of experience. I am giving you a photo of a residential property. Your job is to redesign the landscaping of this exact home.
 
-Keep the following exactly the same:
+Keep the following exactly the same — do NOT remove, move, or alter any of these:
 - The house structure, walls, roof, windows, doors
-- The driveway if there is one
-- Any fences or permanent structures
+- The driveway and all paved surfaces
+- Every fence, railing, post, and gate — keep them exactly as they are
 - All existing trees — keep every tree exactly where it is, same size, same shape. Do NOT add any new trees.
+- All parked cars and objects in the scene
+- Any permanent structures, utility poles, mailboxes, lampposts
 - The perspective and camera angle of the photo
+
+Never remove anything that exists in the original photo. Only add or improve — never subtract.
 
 Only change and improve the landscaping. Make these realistic improvements:
 - Replace any dead, patchy, or overgrown grass with a thick lush green lawn
