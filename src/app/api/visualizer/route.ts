@@ -3,7 +3,25 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const TRANSFORM_PROMPT = `You are a professional landscape designer. The user has uploaded a photo of their home. Generate a realistic transformed version of this exact same photo showing a beautifully redesigned landscape. Keep the house and structure identical - only change the landscaping. Add lush green grass, manicured garden beds, blooming flowers appropriate for Pittsburgh Pennsylvania climate, a clean stone or brick walkway, trimmed hedges, and mature trees where appropriate. The result should look like a realistic before and after photo - not a drawing or illustration. Realistic, achievable, and something a landscaping company could actually build.
+const TRANSFORM_PROMPT = `You are an expert landscape architect and designer with 20 years of experience. I am giving you a photo of a residential property. Your job is to redesign the landscaping of this exact home.
+
+Keep the following exactly the same:
+- The house structure, walls, roof, windows, doors
+- The driveway if there is one
+- Any fences or permanent structures
+- The perspective and camera angle of the photo
+
+Only change and improve the landscaping. Make these realistic improvements:
+- Replace any dead, patchy, or overgrown grass with a thick lush green lawn
+- Add clean defined garden beds along the foundation of the house
+- Plant low maintenance flowers and shrubs that thrive in Pittsburgh Pennsylvania zone 6b climate such as black eyed susans, knockout roses, ornamental grasses, and boxwoods
+- Add clean mulch to all garden beds
+- If there is a walkway make it clean and defined with stone or brick edging
+- Add 1 or 2 small ornamental trees if space allows
+- Trim and shape any existing shrubs that are kept
+- Make it look like a professional landscaping crew just finished the job
+
+The final image should look like a realistic photograph, not a painting or illustration. It should look achievable and buildable by a real landscaping company. The transformation should be impressive but not fantasy — a realistic high end residential landscape job.
 
 After the image, write 2-3 sentences describing the key landscaping changes made. Be specific and inspiring — no intro phrases, just describe the improvements directly.`;
 
@@ -35,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // gemini-2.5-flash-image accepts image input and outputs both image + text in one call
     const response = await genai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3.1-flash-image-preview",
       contents: [
         {
           role: "user",
