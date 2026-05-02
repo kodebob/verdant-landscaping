@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const genai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
 const SYSTEM_PROMPT = `You are a world-class landscape designer with 20+ years of experience transforming residential properties across the country. Your expertise spans horticulture, hardscaping, sustainable landscaping, irrigation design, and outdoor living spaces.
@@ -66,15 +64,42 @@ async function generateLandscapeImage(designPrompt: string): Promise<string | nu
 }
 
 function buildImagePrompt(designContext: string): string {
-  // Extract key design elements from Claude's report to guide the visual
   const lines = designContext.split("\n").slice(0, 20).join(" ");
   return `Photorealistic professional landscape architecture render of a beautifully redesigned residential property exterior. ${lines}. Lush healthy lawn, mature plantings, elegant hardscape. Bright natural daylight, ultra high quality landscape photography, no people, no text, no watermarks.`;
 }
 
+async function generateTextReport(prompt: string): Promise<string> {
+  const response = await genai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: { systemInstruction: SYSTEM_PROMPT },
+  });
+  return response.text ?? "";
+}
+
+async function generateTextReportFromImage(base64: string, mimeType: string): Promise<string> {
+  const response = await genai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType, data: base64 } },
+          {
+            text: "Please analyze this photo of my property and provide a comprehensive landscape design report. Describe exactly what you see, identify the key opportunities and challenges, then craft your full design vision for transforming this outdoor space.",
+          },
+        ],
+      },
+    ],
+    config: { systemInstruction: SYSTEM_PROMPT },
+  });
+  return response.text ?? "";
+}
+
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GOOGLE_API_KEY) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured in .env.local." },
+      { error: "GOOGLE_API_KEY not configured." },
       { status: 500 }
     );
   }
@@ -90,15 +115,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Address is required." }, { status: 400 });
       }
 
-      // Run Claude text report first, then use it to seed Gemini image prompt
-      const claudeMsg = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: `Please create a detailed landscape design report for the property at: ${address}
+      const prompt = `Please create a detailed landscape design report for the property at: ${address}
 
 Base your analysis on:
 - The climate zone, USDA hardiness zone, and typical weather patterns for this region
@@ -107,17 +124,10 @@ Base your analysis on:
 - Local soil conditions and water considerations
 - Landscaping trends and preferences for this market
 
-Craft a comprehensive design vision as if this were a paid proposal for the homeowner.`,
-          },
-        ],
-      });
+Craft a comprehensive design vision as if this were a paid proposal for the homeowner.`;
 
-      const report =
-        claudeMsg.content[0].type === "text" ? claudeMsg.content[0].text : "";
-
-      const imagePrompt = buildImagePrompt(
-        `Residential property at ${address}. ${report}`
-      );
+      const report = await generateTextReport(prompt);
+      const imagePrompt = buildImagePrompt(`Residential property at ${address}. ${report}`);
       const imageBase64 = await generateLandscapeImage(imagePrompt);
 
       return NextResponse.json({ report, imageBase64 });
@@ -148,38 +158,8 @@ Craft a comprehensive design vision as if this were a paid proposal for the home
 
       const arrayBuffer = await imageFile.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const mediaType = imageFile.type as
-        | "image/jpeg"
-        | "image/png"
-        | "image/webp"
-        | "image/gif";
 
-      // Claude analyzes the photo
-      const claudeMsg = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: mediaType, data: base64 },
-              },
-              {
-                type: "text",
-                text: "Please analyze this photo of my property and provide a comprehensive landscape design report. Describe exactly what you see, identify the key opportunities and challenges, then craft your full design vision for transforming this outdoor space.",
-              },
-            ],
-          },
-        ],
-      });
-
-      const report =
-        claudeMsg.content[0].type === "text" ? claudeMsg.content[0].text : "";
-
-      // Gemini renders the redesign vision
+      const report = await generateTextReportFromImage(base64, imageFile.type);
       const imagePrompt = buildImagePrompt(report);
       const imageBase64 = await generateLandscapeImage(imagePrompt);
 
