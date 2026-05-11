@@ -1,7 +1,7 @@
 "use client";
 
 import { useInView } from "react-intersection-observer";
-import { Pencil, Leaf, LayoutGrid, TreePine, Snowflake, Droplets } from "lucide-react";
+import { Pencil, LayoutGrid, TreePine, Snowflake } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Service {
@@ -18,13 +18,6 @@ const services: Service[] = [
     description:
       "Custom designs tailored to your space, lifestyle, and budget — crafted by certified landscape architects with decades of experience.",
     image: "/services/landscape-design.jpg",
-  },
-  {
-    icon: Leaf,
-    title: "Lawn Care",
-    description:
-      "Year-round maintenance programs keeping your turf lush, green, and weed-free through every season with precision and care.",
-    image: "/services/lawn-care.webp",
   },
   {
     icon: LayoutGrid,
@@ -46,13 +39,6 @@ const services: Service[] = [
     description:
       "Spring and fall cleanup services that keep your property pristine and perfectly prepared for every change in season.",
     image: "/services/seasonal-cleanup.avif",
-  },
-  {
-    icon: Droplets,
-    title: "Irrigation",
-    description:
-      "Smart irrigation systems engineered for maximum efficiency — healthier plants, reduced water waste, and lower bills.",
-    image: "/services/irrigation.jpg",
   },
 ];
 
