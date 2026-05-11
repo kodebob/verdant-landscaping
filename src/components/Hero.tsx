@@ -109,7 +109,6 @@ export default function Hero() {
             src={src}
             muted
             playsInline
-            crossOrigin="anonymous"
             preload={i === 0 ? "auto" : "none"}
             className="absolute inset-0 w-full h-full object-cover"
             style={{
