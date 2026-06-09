@@ -143,9 +143,6 @@ export const businessConfig = {
     { src: "/images/e0cabf_ccaae962cfe24712968bba44407340fb~mv2.avif",          alt: "Pool deck and surrounding hardscape" },
   ],
 
-  // ── Location ──────────────────────────────────────────────────────────────
-  location: "Pittsburgh, PA",
-
   // ── Reviews ───────────────────────────────────────────────────────────────
   reviews: [] as { author: string; rating: number; text: string; time: string; photo?: string }[],
 
