@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useBusinessConfig } from "@/config/useBusinessConfig";
 
 const navLinks = [
-  { label: "About", href: "#about" },
-  { label: "Services", href: "#services" },
+  { label: "About",     href: "#about" },
+  { label: "Services",  href: "#services" },
   { label: "Portfolio", href: "#gallery" },
-  { label: "Visualizer", href: "#visualizer" },
-  { label: "Process", href: "#process" },
-  { label: "Contact", href: "#contact" },
+  { label: "Process",   href: "#process" },
+  { label: "Contact",   href: "#contact" },
 ];
 
 export default function Navbar() {
+  const config = useBusinessConfig();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -35,7 +36,7 @@ export default function Navbar() {
           href="#hero"
           className="font-sans font-extrabold text-white uppercase tracking-tight text-xl hover:text-forest-300 transition-colors"
         >
-          K&amp;M Landscaping
+          {config.businessName}
         </a>
 
         {/* Desktop nav */}
@@ -63,21 +64,9 @@ export default function Navbar() {
           className="md:hidden flex flex-col gap-1.5 p-2 group"
           aria-label="Toggle menu"
         >
-          <span
-            className={`block w-6 h-px bg-white transition-all duration-300 origin-center ${
-              menuOpen ? "rotate-45 translate-y-[7px]" : ""
-            }`}
-          />
-          <span
-            className={`block w-6 h-px bg-white transition-all duration-300 ${
-              menuOpen ? "opacity-0 scale-x-0" : ""
-            }`}
-          />
-          <span
-            className={`block w-6 h-px bg-white transition-all duration-300 origin-center ${
-              menuOpen ? "-rotate-45 -translate-y-[7px]" : ""
-            }`}
-          />
+          <span className={`block w-6 h-px bg-white transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-[7px]" : ""}`} />
+          <span className={`block w-6 h-px bg-white transition-all duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`} />
+          <span className={`block w-6 h-px bg-white transition-all duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-[7px]" : ""}`} />
         </button>
       </div>
 

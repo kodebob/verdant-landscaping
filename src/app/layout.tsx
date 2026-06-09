@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { businessConfig } from "@/config/businessConfig";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -18,11 +19,14 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "K and M Landscaping | Premium Outdoor Living",
-  description:
-    "Transform your outdoor space into a living masterpiece. K and M Landscaping offers premium landscape design, lawn care, hardscaping, and AI-powered design visualization.",
-  keywords: "landscaping, landscape design, lawn care, hardscaping, outdoor living",
+  title: businessConfig.metaTitle,
+  description: businessConfig.metaDescription,
+  keywords: businessConfig.metaKeywords,
 };
+
+const brandColors = Object.fromEntries(
+  Object.entries(businessConfig.colors).map(([shade, value]) => [`--brand-${shade}`, value])
+) as React.CSSProperties;
 
 export default function RootLayout({
   children,
@@ -33,6 +37,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${cormorant.variable} ${dmSans.variable}`}
+      style={brandColors}
     >
       <body className="antialiased">{children}</body>
     </html>

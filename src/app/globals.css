@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-forest-50: #f0fbf4;
-  --color-forest-100: #d8f3dc;
-  --color-forest-200: #b7e4c7;
-  --color-forest-300: #95d5b2;
-  --color-forest-400: #74c69d;
-  --color-forest-500: #52b788;
-  --color-forest-600: #40916c;
-  --color-forest-700: #2d6a4f;
-  --color-forest-800: #1b4332;
-  --color-forest-900: #0a2e1a;
-  --color-forest-950: #061a0f;
+  --color-forest-50:  var(--brand-50);
+  --color-forest-100: var(--brand-100);
+  --color-forest-200: var(--brand-200);
+  --color-forest-300: var(--brand-300);
+  --color-forest-400: var(--brand-400);
+  --color-forest-500: var(--brand-500);
+  --color-forest-600: var(--brand-600);
+  --color-forest-700: var(--brand-700);
+  --color-forest-800: var(--brand-800);
+  --color-forest-900: var(--brand-900);
+  --color-forest-950: var(--brand-950);
 
   --font-display: var(--font-cormorant);
   --font-sans: var(--font-dm-sans);
@@ -33,11 +33,23 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #061a0f;
+  background: var(--brand-950);
 }
 ::-webkit-scrollbar-thumb {
-  background: #2d6a4f;
+  background: var(--brand-700);
   border-radius: 3px;
+}
+
+/* Review ticker */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.review-ticker {
+  animation: ticker 40s linear infinite;
+}
+.review-ticker:hover {
+  animation-play-state: paused;
 }
 
 /* Thin scrollbar utility */
@@ -48,6 +60,6 @@ body {
   background: rgba(255,255,255,0.05);
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #40916c;
+  background: var(--brand-600);
   border-radius: 2px;
 }

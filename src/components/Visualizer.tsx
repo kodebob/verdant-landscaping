@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, Sparkles, Loader2, AlertCircle, RefreshCw, X, ZoomIn } from "lucide-react";
+import { useBusinessConfig } from "@/config/useBusinessConfig";
 
 interface Result {
   imageBase64: string;
@@ -10,6 +11,7 @@ interface Result {
 }
 
 export default function Visualizer() {
+  const config = useBusinessConfig();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -223,7 +225,7 @@ export default function Visualizer() {
               {/* After */}
               <div className="relative bg-forest-950 group cursor-zoom-in" style={{ minHeight: "300px" }} onClick={() => setLightbox(`data:${result.mimeType};base64,${result.imageBase64}`)}>
                 <div className="absolute top-4 left-4 z-10 bg-forest-600/90 backdrop-blur-sm px-5 py-2">
-                  <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">After Your K&amp;M Redesign</span>
+                  <span className="text-white text-[11px] tracking-[0.35em] uppercase font-sans font-medium">After Your {config.businessName} Redesign</span>
                 </div>
                 <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-2">
                   <ZoomIn className="w-4 h-4 text-white" />
