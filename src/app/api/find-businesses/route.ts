@@ -36,14 +36,30 @@ export async function POST(req: NextRequest) {
 
   (async () => {
     try {
-      // Try multiple query variations to expand the search area if needed
-      const queries = [
-        `${niche} in ${city}`,
-        `${niche} near ${city}`,
-        `${niche} ${city} area`,
-        `${niche} ${city} metro`,
-        `${niche} services ${city}`,
-      ];
+      // Niche synonyms to cast a wider net
+      const SYNONYMS: Record<string, string[]> = {
+        landscaping:        ["landscaping", "lawn care", "lawn service", "lawn mowing", "yard service", "grass cutting", "lawn maintenance"],
+        hardscape:          ["hardscape", "patio installation", "paver installation", "retaining wall", "concrete contractor", "masonry"],
+        "pressure washing": ["pressure washing", "power washing", "exterior cleaning", "soft washing"],
+        painting:           ["painting contractor", "house painter", "interior painting", "exterior painting", "residential painting"],
+        plumbing:           ["plumber", "plumbing service", "drain cleaning", "pipe repair"],
+        electrician:        ["electrician", "electrical contractor", "electrical service", "electrical repair"],
+        roofing:            ["roofing contractor", "roof repair", "roofer", "roof replacement"],
+        "tree service":     ["tree service", "tree removal", "tree trimming", "arborist", "stump removal"],
+        barber:             ["barber", "barbershop", "barber shop", "men's haircut"],
+        "personal trainer": ["personal trainer", "fitness trainer", "personal training", "fitness coach"],
+        "food truck":       ["food truck", "mobile food", "catering truck"],
+      };
+
+      const nicheKey = niche.toLowerCase();
+      const nicheTerms = SYNONYMS[nicheKey] ?? [niche, `${niche} service`, `${niche} contractor`];
+
+      // Build queries: each synonym × city + area expansion
+      const queries: string[] = [];
+      for (const term of nicheTerms) {
+        queries.push(`${term} in ${city}`);
+        queries.push(`${term} near ${city}`);
+      }
 
       const foundCount = { value: 0 };
       const seenPlaceIds = new Set<string>();
