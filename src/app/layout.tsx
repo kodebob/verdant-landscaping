@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { businessConfig } from "@/config/businessConfig";
 import "./globals.css";
 
+
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
@@ -19,9 +20,8 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: businessConfig.metaTitle,
-  description: businessConfig.metaDescription,
-  keywords: businessConfig.metaKeywords,
+  title: "Mallard Creative",
+  description: "Website preview system",
 };
 
 const brandColors = Object.fromEntries(
