@@ -133,9 +133,9 @@ export default function FindPage() {
             <select
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+              className="w-full bg-[#0d1321] border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
             >
-              {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
+              {NICHES.map((n) => <option key={n} value={n} className="bg-[#0d1321] text-white">{n}</option>)}
             </select>
           </div>
           <div>
@@ -154,9 +154,9 @@ export default function FindPage() {
             <select
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full bg-white/5 border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+              className="w-full bg-[#0d1321] border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
             >
-              {COUNTS.map((n) => <option key={n} value={n}>{n}</option>)}
+              {COUNTS.map((n) => <option key={n} value={n} className="bg-[#0d1321] text-white">{n}</option>)}
             </select>
           </div>
           <div>
@@ -164,9 +164,9 @@ export default function FindPage() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as typeof filter)}
-              className="w-full bg-white/5 border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+              className="w-full bg-[#0d1321] border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
             >
-              {FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              {FILTERS.map((f) => <option key={f.value} value={f.value} className="bg-[#0d1321] text-white">{f.label}</option>)}
             </select>
           </div>
         </div>

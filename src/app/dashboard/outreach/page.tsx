@@ -162,9 +162,9 @@ export default function OutreachPage() {
               <select
                 value={templateId}
                 onChange={(e) => setTemplateId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30 appearance-none pr-8"
+                className="w-full bg-[#0d1321] border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30 appearance-none pr-8"
               >
-                {TEXT_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                {TEXT_TEMPLATES.map((t) => <option key={t.id} value={t.id} className="bg-[#0d1321] text-white">{t.label}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
             </div>
