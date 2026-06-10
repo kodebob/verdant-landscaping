@@ -18,7 +18,7 @@ interface Props {
   slug: string;
 }
 
-export default function PreviewClient({ config, status, slug }: Props) {
+export default function PreviewClient({ config, status }: Props) {
   const brandColors = Object.fromEntries(
     Object.entries(config.colors).map(([shade, value]) => [`--brand-${shade}`, value])
   ) as React.CSSProperties;
@@ -44,10 +44,10 @@ export default function PreviewClient({ config, status, slug }: Props) {
         <main>
           <Hero />
           <TrustStrip />
-          <ReviewTicker />
           <About />
           <Services />
           <HowItWorks />
+          <ReviewTicker />
           <Gallery />
           <Contact />
         </main>
