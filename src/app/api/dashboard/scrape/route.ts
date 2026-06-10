@@ -16,10 +16,30 @@ async function resolvePhotoUrl(ref: string, key: string): Promise<string | null>
   }
 }
 
-function extractSearchQuery(input: string): string {
-  const mapsMatch = input.match(/maps\/place\/([^/@?]+)/);
-  if (mapsMatch) return decodeURIComponent(mapsMatch[1]).replace(/\+/g, " ");
-  return input.trim();
+async function resolveInput(input: string): Promise<{ placeId?: string; searchQuery: string }> {
+  const trimmed = input.trim();
+
+  // Follow short Maps URLs (maps.app.goo.gl or goo.gl/maps)
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(trimmed)) {
+    try {
+      const res = await fetch(trimmed, { redirect: "follow", signal: AbortSignal.timeout(8000) });
+      const finalUrl = res.url;
+      const placeIdMatch = finalUrl.match(/[?&!]1s(ChIJ[A-Za-z0-9_%-]+)/);
+      if (placeIdMatch) return { placeId: decodeURIComponent(placeIdMatch[1]), searchQuery: "" };
+      const nameMatch = finalUrl.match(/maps\/place\/([^/@?]+)/);
+      if (nameMatch) return { searchQuery: decodeURIComponent(nameMatch[1]).replace(/\+/g, " ") };
+    } catch { /* fall through to text search */ }
+  }
+
+  // Full Google Maps URL — try to pull place ID from data param
+  const placeIdMatch = trimmed.match(/[?&!]1s(ChIJ[A-Za-z0-9_%-]+)/);
+  if (placeIdMatch) return { placeId: decodeURIComponent(placeIdMatch[1]), searchQuery: "" };
+
+  // Full URL with place name in path
+  const nameMatch = trimmed.match(/maps\/place\/([^/@?]+)/);
+  if (nameMatch) return { searchQuery: decodeURIComponent(nameMatch[1]).replace(/\+/g, " ") };
+
+  return { searchQuery: trimmed };
 }
 
 function parseJson(text: string): Record<string, unknown> | null {
@@ -64,18 +84,22 @@ export async function POST(req: NextRequest) {
       // ── Step 1: Find business ──────────────────────────────────────────────
       await send({ step: "finding", message: "Finding business..." });
 
-      const searchQuery = extractSearchQuery(query);
-      const searchRes = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_KEY}`
-      );
-      const searchData = await searchRes.json();
+      const { placeId: directPlaceId, searchQuery } = await resolveInput(query);
 
-      if (searchData.status !== "OK" || !searchData.results?.length) {
-        await send({ step: "error", message: `Business not found (${searchData.status}). Try a more specific name and city.` });
-        return;
+      let placeId: string;
+      if (directPlaceId) {
+        placeId = directPlaceId;
+      } else {
+        const searchRes = await fetch(
+          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_KEY}`
+        );
+        const searchData = await searchRes.json();
+        if (searchData.status !== "OK" || !searchData.results?.length) {
+          await send({ step: "error", message: `Business not found (${searchData.status}). Try a more specific name and city.` });
+          return;
+        }
+        placeId = searchData.results[0].place_id;
       }
-
-      const placeId = searchData.results[0].place_id;
 
       // ── Step 2: Get place details ──────────────────────────────────────────
       const detailsRes = await fetch(
