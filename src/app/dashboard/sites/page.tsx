@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Copy, Check, ExternalLink, Loader2, CheckCircle, XCircle, Circle, Trash2, Globe, Upload } from "lucide-react";
+import { Search, Copy, Check, ExternalLink, Loader2, CheckCircle, XCircle, Circle, Trash2, Globe, Upload, PenLine } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface SiteRow {
@@ -26,7 +26,7 @@ interface Result {
   photosCount: number;
 }
 
-type Mode = "google" | "import";
+type Mode = "google" | "import" | "manual";
 
 const GOOGLE_STEPS = ["finding", "photos", "config", "saving"];
 const GOOGLE_STEP_LABELS: Record<string, string> = {
@@ -43,16 +43,27 @@ const IMPORT_STEP_LABELS: Record<string, string> = {
   saving:   "Saving to database",
 };
 
+const MANUAL_STEPS = ["config", "saving"];
+const MANUAL_STEP_LABELS: Record<string, string> = {
+  config: "Generating config",
+  saving: "Saving to database",
+};
+
+const NICHES = ["landscaping","hardscape","pressure washing","painting","plumbing","electrician","lawn care","fence installation","concrete contractor","roofing","tree service","personal trainer"];
+
+interface ManualForm { name: string; phone: string; city: string; niche: string; description: string; }
+
 export default function SitesPage() {
-  const [mode,    setMode]    = useState<Mode>("google");
-  const [query,   setQuery]   = useState("");
-  const [running, setRunning] = useState(false);
-  const [steps,   setSteps]   = useState<ProgressStep[]>([]);
-  const [result,  setResult]  = useState<Result | null>(null);
-  const [error,   setError]   = useState<string | null>(null);
-  const [sites,   setSites]   = useState<SiteRow[]>([]);
-  const [copied,  setCopied]  = useState<string | null>(null);
-  const [search,  setSearch]  = useState("");
+  const [mode,       setMode]       = useState<Mode>("google");
+  const [query,      setQuery]      = useState("");
+  const [manual,     setManual]     = useState<ManualForm>({ name: "", phone: "", city: "", niche: "landscaping", description: "" });
+  const [running,    setRunning]    = useState(false);
+  const [steps,      setSteps]      = useState<ProgressStep[]>([]);
+  const [result,     setResult]     = useState<Result | null>(null);
+  const [error,      setError]      = useState<string | null>(null);
+  const [sites,      setSites]      = useState<SiteRow[]>([]);
+  const [copied,     setCopied]     = useState<string | null>(null);
+  const [search,     setSearch]     = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => { fetchSites(); }, []);
@@ -73,16 +84,30 @@ export default function SitesPage() {
     setError(null);
   }
 
+  const canGenerate = mode === "manual"
+    ? !!(manual.name.trim() && manual.city.trim())
+    : !!query.trim();
+
   async function handleGenerate() {
-    if (!query.trim() || running) return;
+    if (!canGenerate || running) return;
     setRunning(true);
     setSteps([]);
     setResult(null);
     setError(null);
     abortRef.current = new AbortController();
 
-    const endpoint = mode === "import" ? "/api/dashboard/import-site" : "/api/dashboard/scrape";
-    const body      = mode === "import" ? { url: query } : { query };
+    let endpoint: string;
+    let body: object;
+    if (mode === "manual") {
+      endpoint = "/api/dashboard/manual-site";
+      body = manual;
+    } else if (mode === "import") {
+      endpoint = "/api/dashboard/import-site";
+      body = { url: query };
+    } else {
+      endpoint = "/api/dashboard/scrape";
+      body = { query };
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -157,8 +182,8 @@ export default function SitesPage() {
     return "active";
   }
 
-  const activeSteps  = mode === "google" ? GOOGLE_STEPS  : IMPORT_STEPS;
-  const activeLabels = mode === "google" ? GOOGLE_STEP_LABELS : IMPORT_STEP_LABELS;
+  const activeSteps  = mode === "google" ? GOOGLE_STEPS  : mode === "import" ? IMPORT_STEPS  : MANUAL_STEPS;
+  const activeLabels = mode === "google" ? GOOGLE_STEP_LABELS : mode === "import" ? IMPORT_STEP_LABELS : MANUAL_STEP_LABELS;
   const filtered     = sites.filter((s) => s.business_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -190,35 +215,111 @@ export default function SitesPage() {
               }`}
             >
               <Upload className="w-3 h-3" />
-              Import from URL
+              Import URL
+            </button>
+            <button
+              onClick={() => switchMode("manual")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] tracking-[0.15em] uppercase font-semibold transition-colors ${
+                mode === "manual" ? "bg-[#d4a853]/15 text-[#d4a853]" : "text-white/30 hover:text-white/60"
+              }`}
+            >
+              <PenLine className="w-3 h-3" />
+              Manual
             </button>
           </div>
         </div>
 
         {mode === "import" && (
           <p className="text-white/25 text-xs font-sans mb-3">
-            Paste the URL of an existing business website — Claude will extract their info and rebuild it in your template.
+            Paste the URL of an existing business website — Claude extracts their info and rebuilds it in your template.
           </p>
         )}
 
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-            placeholder={mode === "import" ? "https://oldwebsite.com" : "Business name + city, or paste any Google Maps link"}
-            className="flex-1 bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-4 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
-          />
-          <button
-            onClick={handleGenerate}
-            disabled={running || !query.trim()}
-            className="bg-[#d4a853] hover:bg-[#c49742] text-black px-6 py-2.5 text-[11px] tracking-[0.25em] uppercase font-sans font-semibold disabled:opacity-40 flex items-center gap-2 transition-colors"
-          >
-            {running && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {running ? "Generating..." : "Generate"}
-          </button>
-        </div>
+        {mode === "manual" ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-sans block mb-1">Business Name *</label>
+                <input
+                  type="text"
+                  value={manual.name}
+                  onChange={(e) => setManual((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Elliott's Lawn Care"
+                  className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-sans block mb-1">Phone</label>
+                <input
+                  type="text"
+                  value={manual.phone}
+                  onChange={(e) => setManual((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="(412) 555-0001"
+                  className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-sans block mb-1">City, State *</label>
+                <input
+                  type="text"
+                  value={manual.city}
+                  onChange={(e) => setManual((p) => ({ ...p, city: e.target.value }))}
+                  placeholder="Pittsburgh, PA"
+                  className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+                />
+              </div>
+              <div>
+                <label className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-sans block mb-1">Business Type *</label>
+                <select
+                  value={manual.niche}
+                  onChange={(e) => setManual((p) => ({ ...p, niche: e.target.value }))}
+                  className="w-full bg-[#0d1321] border border-white/10 text-white px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+                >
+                  {NICHES.map((n) => (
+                    <option key={n} value={n} className="bg-[#0d1321] text-white">{n.charAt(0).toUpperCase() + n.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-sans block mb-1">Extra Info (optional)</label>
+              <input
+                type="text"
+                value={manual.description}
+                onChange={(e) => setManual((p) => ({ ...p, description: e.target.value }))}
+                placeholder="e.g. Family owned since 1998, specializes in residential, also does snow removal"
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-3 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+              />
+            </div>
+            <button
+              onClick={handleGenerate}
+              disabled={running || !canGenerate}
+              className="bg-[#d4a853] hover:bg-[#c49742] text-black px-6 py-2.5 text-[11px] tracking-[0.25em] uppercase font-sans font-semibold disabled:opacity-40 flex items-center gap-2 transition-colors"
+            >
+              {running && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {running ? "Generating..." : "Generate"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+              placeholder={mode === "import" ? "https://oldwebsite.com" : "Business name + city, or paste any Google Maps link"}
+              className="flex-1 bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-4 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={running || !canGenerate}
+              className="bg-[#d4a853] hover:bg-[#c49742] text-black px-6 py-2.5 text-[11px] tracking-[0.25em] uppercase font-sans font-semibold disabled:opacity-40 flex items-center gap-2 transition-colors"
+            >
+              {running && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {running ? "Generating..." : "Generate"}
+            </button>
+          </div>
+        )}
 
         {(running || steps.length > 0) && !result && !error && (
           <div className="mt-4 space-y-2">
