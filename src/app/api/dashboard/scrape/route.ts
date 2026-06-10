@@ -16,29 +16,64 @@ async function resolvePhotoUrl(ref: string, key: string): Promise<string | null>
   }
 }
 
-async function resolveInput(input: string): Promise<{ placeId?: string; searchQuery: string }> {
-  const trimmed = input.trim();
+function extractFromMapsUrl(url: string): { placeId?: string; searchQuery: string } {
+  // ChIJ place ID anywhere in the URL
+  const chijMatch = url.match(/!1s(ChIJ[^!&%\s]+)/);
+  if (chijMatch) return { placeId: decodeURIComponent(chijMatch[1]), searchQuery: "" };
 
-  // Follow short Maps URLs (maps.app.goo.gl or goo.gl/maps)
-  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(trimmed)) {
-    try {
-      const res = await fetch(trimmed, { redirect: "follow", signal: AbortSignal.timeout(8000) });
-      const finalUrl = res.url;
-      const placeIdMatch = finalUrl.match(/[?&!]1s(ChIJ[A-Za-z0-9_%-]+)/);
-      if (placeIdMatch) return { placeId: decodeURIComponent(placeIdMatch[1]), searchQuery: "" };
-      const nameMatch = finalUrl.match(/maps\/place\/([^/@?]+)/);
-      if (nameMatch) return { searchQuery: decodeURIComponent(nameMatch[1]).replace(/\+/g, " ") };
-    } catch { /* fall through to text search */ }
+  // Place name in path: /maps/place/Business+Name/
+  const pathMatch = url.match(/\/maps\/place\/([^/@?]+)/);
+  if (pathMatch) return { searchQuery: decodeURIComponent(pathMatch[1]).replace(/\+/g, " ") };
+
+  // q= query param: maps.google.com/maps?q=Business+Name
+  const qMatch = url.match(/[?&]q=([^&]+)/);
+  if (qMatch) {
+    const q = decodeURIComponent(qMatch[1]).replace(/\+/g, " ");
+    if (!q.startsWith("http") && q.length < 150) return { searchQuery: q };
   }
 
-  // Full Google Maps URL — try to pull place ID from data param
-  const placeIdMatch = trimmed.match(/[?&!]1s(ChIJ[A-Za-z0-9_%-]+)/);
-  if (placeIdMatch) return { placeId: decodeURIComponent(placeIdMatch[1]), searchQuery: "" };
+  return { searchQuery: "" };
+}
 
-  // Full URL with place name in path
-  const nameMatch = trimmed.match(/maps\/place\/([^/@?]+)/);
-  if (nameMatch) return { searchQuery: decodeURIComponent(nameMatch[1]).replace(/\+/g, " ") };
+async function resolveInput(input: string): Promise<{ placeId?: string; searchQuery: string; resolveError?: string }> {
+  const trimmed = input.trim();
 
+  // Short Google Maps URL — follow redirect
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(trimmed)) {
+    try {
+      const res = await fetch(trimmed, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(10000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" },
+      });
+      const finalUrl = res.url;
+
+      // If redirect didn't change URL, Google blocked us
+      if (finalUrl === trimmed || finalUrl.includes("accounts.google.com")) {
+        return { searchQuery: "", resolveError: "Couldn't follow that short link. Copy the full URL from Google Maps, or use Manual Entry." };
+      }
+
+      const extracted = extractFromMapsUrl(finalUrl);
+      if (extracted.placeId || extracted.searchQuery) return extracted;
+
+      // Last resort: try reading the HTML body for the canonical URL
+      const html = await res.text().catch(() => "");
+      const canonMatch = html.match(/canonical[^>]+href="([^"]+maps[^"]+)"/i);
+      if (canonMatch) {
+        const canonical = extractFromMapsUrl(canonMatch[1]);
+        if (canonical.placeId || canonical.searchQuery) return canonical;
+      }
+    } catch {
+      return { searchQuery: "", resolveError: "Network error following that link. Try the full Maps URL or paste the business name + city." };
+    }
+    return { searchQuery: "", resolveError: "Couldn't extract the business from that link. Try copying the full Google Maps URL instead." };
+  }
+
+  // Any Google Maps URL
+  const extracted = extractFromMapsUrl(trimmed);
+  if (extracted.placeId || extracted.searchQuery) return extracted;
+
+  // Plain text search
   return { searchQuery: trimmed };
 }
 
@@ -84,7 +119,12 @@ export async function POST(req: NextRequest) {
       // ── Step 1: Find business ──────────────────────────────────────────────
       await send({ step: "finding", message: "Finding business..." });
 
-      const { placeId: directPlaceId, searchQuery } = await resolveInput(query);
+      const { placeId: directPlaceId, searchQuery, resolveError } = await resolveInput(query);
+
+      if (resolveError) {
+        await send({ step: "error", message: resolveError });
+        return;
+      }
 
       let placeId: string;
       if (directPlaceId) {
@@ -95,7 +135,7 @@ export async function POST(req: NextRequest) {
         );
         const searchData = await searchRes.json();
         if (searchData.status !== "OK" || !searchData.results?.length) {
-          await send({ step: "error", message: `Business not found (${searchData.status}). Try a more specific name and city.` });
+          await send({ step: "error", message: `Business not found (${searchData.status}). Try adding the city — e.g. "Slim's Junk Removal Pittsburgh".` });
           return;
         }
         placeId = searchData.results[0].place_id;
