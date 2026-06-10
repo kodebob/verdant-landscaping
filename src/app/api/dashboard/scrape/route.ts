@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from "@/lib/supabase";
+import { fillPhotos } from "@/lib/stockPhotos";
 
 async function resolvePhotoUrl(ref: string, key: string): Promise<string | null> {
   try {
@@ -85,7 +86,12 @@ export async function POST(req: NextRequest) {
         if (url) photoUrls.push(url);
       }
 
-      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}`, count: photoUrls.length });
+      // Fill any missing photos with niche-appropriate stock images
+      const nicheGuess = (d.types ?? [])
+        .filter((t: string) => !["point_of_interest", "establishment"].includes(t))[0] ?? "default";
+      const filledPhotos = fillPhotos(photoUrls, nicheGuess, 6);
+
+      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}${photoUrls.length < 6 ? ` (${6 - photoUrls.length} stock)` : ""}`, count: filledPhotos.length });
 
       // ── Step 4: Generate config with Claude ───────────────────────────────
       await send({ step: "config", message: "Generating config..." });
@@ -96,11 +102,11 @@ export async function POST(req: NextRequest) {
         .filter((t: string) => !["point_of_interest", "establishment"].includes(t))
         .join(", ");
 
-      const photoJson = photoUrls.map((url, i) => `{ "src": "${url}", "alt": "Photo ${i + 1}" }`).join(",\n    ");
-      const photo0 = photoUrls[0] ?? "";
-      const photo1 = photoUrls[1] ?? photo0;
-      const photo2 = photoUrls[2] ?? photo0;
-      const photo3 = photoUrls[3] ?? photo0;
+      const photoJson = filledPhotos.map((url, i) => `{ "src": "${url}", "alt": "Photo ${i + 1}" }`).join(",\n    ");
+      const photo0 = filledPhotos[0] ?? "";
+      const photo1 = filledPhotos[1] ?? photo0;
+      const photo2 = filledPhotos[2] ?? photo0;
+      const photo3 = filledPhotos[3] ?? photo0;
 
       const prompt = `You are a web developer. A client's business was scraped from Google Places. Generate a complete businessConfig JSON object for their website.
 
@@ -219,7 +225,7 @@ RULES:
         slug,
         business_name: d.name,
         config,
-        photos: photoUrls,
+        photos: filledPhotos,
         place_id: placeId,
         status: "preview",
       });
