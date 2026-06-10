@@ -134,14 +134,23 @@ RULES:
   const response  = await anthropic.messages.create({
     model:      "claude-sonnet-4-6",
     max_tokens: 4000,
-    messages:   [{ role: "user", content: prompt }],
+    messages:   [
+      { role: "user", content: prompt },
+      { role: "assistant", content: "{" },
+    ],
   });
 
-  const raw     = response.content[0].type === "text" ? response.content[0].text : "";
+  const raw     = "{" + (response.content[0].type === "text" ? response.content[0].text : "");
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
   let config: Record<string, unknown>;
-  try { config = JSON.parse(cleaned); } catch { return null; }
+  try { config = JSON.parse(cleaned); } catch {
+    const start = cleaned.indexOf("{");
+    const end   = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try { config = JSON.parse(cleaned.slice(start, end + 1)); } catch { return null; }
+    } else { return null; }
+  }
 
   // Inject real reviews
   const reviews = (d.reviews ?? [])

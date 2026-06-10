@@ -172,10 +172,13 @@ RULES:
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "user", content: prompt },
+          { role: "assistant", content: "{" },
+        ],
       });
 
-      const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+      const rawText = "{" + (response.content[0].type === "text" ? response.content[0].text : "");
       const config = parseJson(rawText);
 
       if (!config) {
