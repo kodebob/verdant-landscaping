@@ -7,7 +7,6 @@ interface PlaceResult {
   formatted_address: string;
   formatted_phone_number?: string;
   website?: string;
-  business_status?: string;
 }
 
 async function getPageSpeed(url: string, key: string): Promise<number | null> {
@@ -37,11 +36,14 @@ export async function POST(req: NextRequest) {
 
   (async () => {
     try {
-      const results: PlaceResult[] = [];
-      let pageToken: string | undefined;
       const query = `${niche} in ${city}`;
+      let pageToken: string | undefined;
+      let pageNum = 0;
+      const MAX_PAGES = 3; // Google Places max = 3 pages (~60 results)
+      const foundCount = { value: 0 };
 
-      while (results.length < count) {
+      // Keep fetching pages until we have enough filtered results
+      while (foundCount.value < count && pageNum < MAX_PAGES) {
         const url = pageToken
           ? `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${pageToken}&key=${GOOGLE_KEY}`
           : `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_KEY}`;
@@ -55,70 +57,76 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        results.push(...(data.results ?? []));
+        const places: PlaceResult[] = data.results ?? [];
         pageToken = data.next_page_token;
+        pageNum++;
 
-        if (!pageToken || results.length >= count) break;
+        // Process in batches of 5 — stop mid-page if we've hit the target
+        const BATCH = 5;
+        for (let i = 0; i < places.length && foundCount.value < count; i += BATCH) {
+          const chunk = places.slice(i, Math.min(i + BATCH, places.length));
+
+          await Promise.all(
+            chunk.map(async (place) => {
+              if (foundCount.value >= count) return;
+
+              const detailRes = await fetch(
+                `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,website&key=${GOOGLE_KEY}`
+              );
+              const detailData = await detailRes.json();
+              const d = detailData.result ?? {};
+
+              const hasWebsite = !!d.website;
+              let websiteScore: number | null = null;
+
+              if (hasWebsite && (filter === "bad" || filter === "both")) {
+                websiteScore = await getPageSpeed(d.website, GOOGLE_KEY);
+              }
+
+              // Apply filter
+              if (filter === "none" && hasWebsite) return;
+              if (filter === "bad" && (!hasWebsite || (websiteScore !== null && websiteScore >= 60))) return;
+
+              // Upsert — don't overwrite status if already contacted
+              const { data: upserted } = await supabase
+                .from("businesses")
+                .upsert({
+                  name: d.name ?? place.name,
+                  phone: d.formatted_phone_number ?? null,
+                  address: d.formatted_address ?? place.formatted_address,
+                  has_website: hasWebsite,
+                  website_score: websiteScore,
+                  website: d.website ?? null,
+                  niche,
+                  city,
+                }, { onConflict: "name,city" })
+                .select("id, status")
+                .single();
+
+              foundCount.value++;
+
+              await send({
+                type: "result",
+                place_id: place.place_id,
+                name: d.name ?? place.name,
+                phone: d.formatted_phone_number ?? null,
+                address: d.formatted_address ?? place.formatted_address,
+                has_website: hasWebsite,
+                website: d.website ?? null,
+                website_score: websiteScore,
+                db_id: upserted?.id ?? null,
+                already_contacted: upserted?.status === "contacted",
+              });
+            })
+          );
+        }
+
+        if (!pageToken || foundCount.value >= count) break;
+        // Google requires a short delay before using next_page_token
         await new Promise((r) => setTimeout(r, 2000));
       }
 
-      const batch = results.slice(0, count);
-
-      await send({ type: "total", count: batch.length });
-
-      // Fetch details + optionally PageSpeed in parallel batches of 5
-      const BATCH = 5;
-      for (let i = 0; i < batch.length; i += BATCH) {
-        const chunk = batch.slice(i, i + BATCH);
-
-        await Promise.all(
-          chunk.map(async (place) => {
-            // Get phone + website from details
-            const detailRes = await fetch(
-              `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,website&key=${GOOGLE_KEY}`
-            );
-            const detailData = await detailRes.json();
-            const d = detailData.result ?? {};
-
-            const hasWebsite = !!d.website;
-            let websiteScore: number | null = null;
-
-            if (hasWebsite && (filter === "bad" || filter === "both")) {
-              websiteScore = await getPageSpeed(d.website, GOOGLE_KEY);
-            }
-
-            // Apply filter
-            if (filter === "none" && hasWebsite) return;
-            if (filter === "bad" && (!hasWebsite || (websiteScore !== null && websiteScore >= 60))) return;
-
-            const business = {
-              type: "result",
-              place_id: place.place_id,
-              name: d.name ?? place.name,
-              phone: d.formatted_phone_number ?? null,
-              address: d.formatted_address ?? place.formatted_address,
-              has_website: hasWebsite,
-              website: d.website ?? null,
-              website_score: websiteScore,
-            };
-
-            // Upsert to businesses table
-            await supabase.from("businesses").upsert({
-              name: business.name,
-              phone: business.phone,
-              address: business.address,
-              has_website: business.has_website,
-              website_score: business.website_score,
-              niche,
-              city,
-              status: "prospect",
-            }, { onConflict: "name,city" }).select().single();
-
-            await send(business);
-          })
-        );
-      }
-
+      await send({ type: "total", count: foundCount.value });
       await send({ type: "done" });
     } catch (err) {
       await send({ type: "error", message: err instanceof Error ? err.message : "Unknown error" });

@@ -20,6 +20,8 @@ interface Business {
   has_website: boolean;
   website: string | null;
   website_score: number | null;
+  db_id: string | null;
+  already_contacted: boolean;
 }
 
 export default function FindPage() {
@@ -29,7 +31,6 @@ export default function FindPage() {
   const [filter, setFilter] = useState<"none" | "bad" | "both" | "all">("none");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<Business[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatingSite, setGeneratingSite] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -38,7 +39,6 @@ export default function FindPage() {
     if (!city.trim() || running) return;
     setRunning(true);
     setResults([]);
-    setTotal(null);
     setError(null);
     abortRef.current = new AbortController();
 
@@ -64,8 +64,7 @@ export default function FindPage() {
           if (!line.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === "total") setTotal(data.count);
-            else if (data.type === "result") setResults((p) => [...p, data]);
+            if (data.type === "result") setResults((p) => [...p, data]);
             else if (data.type === "error") setError(data.message);
           } catch {}
         }
@@ -192,7 +191,9 @@ export default function FindPage() {
           <div className="px-6 py-4 border-b border-white/6 flex items-center justify-between">
             <p className="text-white/40 text-[11px] tracking-[0.25em] uppercase font-sans">
               Results
-              {total !== null && <span className="text-white/20 ml-2">({results.length} / {total})</span>}
+              <span className="text-white/20 ml-2">
+                {running ? `(${results.length} found…)` : `(${results.length})`}
+              </span>
             </p>
             {running && <Loader2 className="w-4 h-4 animate-spin text-white/30" />}
           </div>
@@ -200,7 +201,7 @@ export default function FindPage() {
             <table className="w-full text-sm font-sans">
               <thead>
                 <tr className="border-b border-white/5">
-                  {["Business", "Phone", "Website", "Score", "Address", "Actions"].map((h) => (
+                  {["Business", "Phone", "Website", "Score", "Address", "Status", "Actions"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-white/25 text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -226,6 +227,11 @@ export default function FindPage() {
                     </td>
                     <td className="px-4 py-3 text-white/40 max-w-[200px] truncate">
                       <span className="flex items-center gap-1"><MapPin className="w-3 h-3 flex-shrink-0" />{b.address}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {b.already_contacted
+                        ? <span className="text-[10px] tracking-widest uppercase font-semibold px-2 py-0.5 bg-amber-900/30 text-amber-400">Texted</span>
+                        : <span className="text-[10px] tracking-widest uppercase font-semibold px-2 py-0.5 bg-white/5 text-white/25">New</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

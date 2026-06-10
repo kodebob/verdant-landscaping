@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
       twilio_sid: msg.sid,
     });
 
+    // Mark business as contacted so Find Businesses shows the Texted badge
+    if (businessId) {
+      await supabase.from("businesses").update({ status: "contacted" }).eq("id", businessId);
+    }
+
     return NextResponse.json({ success: true, sid: msg.sid, status: msg.status });
   } catch (err) {
     return NextResponse.json(
