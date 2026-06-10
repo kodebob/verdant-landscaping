@@ -197,8 +197,9 @@ RULES:
 - aboutParagraphs: write compelling, specific copy for this type of business. Do NOT use the business name excessively.`;
 
       const response = await anthropic.messages.create({
-        model: "claude-fable-5",
+        model: "claude-sonnet-4-6",
         max_tokens: 4000,
+        system: "You are a JSON generator. Every response must be a single valid JSON object — start with { and end with }. No markdown, no code fences, no explanation.",
         messages: [{ role: "user", content: prompt }],
       });
 
