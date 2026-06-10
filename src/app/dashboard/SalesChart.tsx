@@ -42,7 +42,7 @@ export default function SalesChart({ data }: Props) {
             fontSize: 12,
             color: "#fff",
           }}
-          formatter={(v: number) => [`$${v}`, "Revenue"]}
+          formatter={(v) => [`$${v}`, "Revenue"]}
         />
         <Line
           type="monotone"
