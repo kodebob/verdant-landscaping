@@ -49,7 +49,7 @@ const MANUAL_STEP_LABELS: Record<string, string> = {
   saving: "Saving to database",
 };
 
-const NICHES = ["landscaping","hardscape","pressure washing","painting","plumbing","electrician","lawn care","fence installation","concrete contractor","roofing","tree service","personal trainer"];
+const NICHES = ["landscaping","hardscape","pressure washing","painting","plumbing","electrician","lawn care","fence installation","concrete contractor","roofing","tree service","junk removal","moving company","cleaning service","HVAC","personal trainer","handyman","pool service","pest control","flooring"];
 
 interface ManualForm { name: string; phone: string; city: string; niche: string; description: string; }
 
