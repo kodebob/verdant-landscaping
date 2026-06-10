@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Copy, Check, ExternalLink, Loader2, CheckCircle, XCircle, Circle, Trash2 } from "lucide-react";
+import { Search, Copy, Check, ExternalLink, Loader2, CheckCircle, XCircle, Circle, Trash2, Globe, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface SiteRow {
@@ -26,24 +26,33 @@ interface Result {
   photosCount: number;
 }
 
-const STEPS = ["finding", "photos", "config", "saving"];
+type Mode = "google" | "import";
 
-const STEP_LABELS: Record<string, string> = {
+const GOOGLE_STEPS = ["finding", "photos", "config", "saving"];
+const GOOGLE_STEP_LABELS: Record<string, string> = {
   finding: "Finding business",
   photos:  "Pulling photos",
   config:  "Generating config",
   saving:  "Saving to database",
 };
 
+const IMPORT_STEPS = ["fetching", "config", "saving"];
+const IMPORT_STEP_LABELS: Record<string, string> = {
+  fetching: "Fetching website",
+  config:   "Generating config",
+  saving:   "Saving to database",
+};
+
 export default function SitesPage() {
-  const [query, setQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const [mode,    setMode]    = useState<Mode>("google");
+  const [query,   setQuery]   = useState("");
   const [running, setRunning] = useState(false);
-  const [steps, setSteps] = useState<ProgressStep[]>([]);
-  const [result, setResult] = useState<Result | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [sites, setSites] = useState<SiteRow[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [steps,   setSteps]   = useState<ProgressStep[]>([]);
+  const [result,  setResult]  = useState<Result | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
+  const [sites,   setSites]   = useState<SiteRow[]>([]);
+  const [copied,  setCopied]  = useState<string | null>(null);
+  const [search,  setSearch]  = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => { fetchSites(); }, []);
@@ -56,6 +65,14 @@ export default function SitesPage() {
     if (data) setSites(data);
   }
 
+  function switchMode(m: Mode) {
+    setMode(m);
+    setQuery("");
+    setSteps([]);
+    setResult(null);
+    setError(null);
+  }
+
   async function handleGenerate() {
     if (!query.trim() || running) return;
     setRunning(true);
@@ -64,14 +81,17 @@ export default function SitesPage() {
     setError(null);
     abortRef.current = new AbortController();
 
+    const endpoint = mode === "import" ? "/api/dashboard/import-site" : "/api/dashboard/scrape";
+    const body      = mode === "import" ? { url: query } : { query };
+
     try {
-      const res = await fetch("/api/dashboard/scrape", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify(body),
         signal: abortRef.current.signal,
       });
-      const reader = res.body!.getReader();
+      const reader  = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       while (true) {
@@ -85,7 +105,12 @@ export default function SitesPage() {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.step === "error") { setError(data.message); break; }
-            if (data.step === "done" && data.result) { setResult(data.result); setSteps((p) => p.map((s) => ({ ...s, done: true }))); fetchSites(); break; }
+            if (data.step === "done" && data.result) {
+              setResult(data.result);
+              setSteps((p) => p.map((s) => ({ ...s, done: true })));
+              fetchSites();
+              break;
+            }
             setSteps((prev) => {
               const next: ProgressStep = { step: data.step, message: data.message, done: false, error: false };
               const idx = prev.findIndex((s) => s.step === data.step);
@@ -121,16 +146,20 @@ export default function SitesPage() {
   }
 
   function stepStatus(key: string) {
-    const found = steps.find((s) => s.step === key || (key === "photos" && s.step === "photos_done"));
+    const found = steps.find((s) =>
+      s.step === key ||
+      (key === "photos"   && s.step === "photos_done") ||
+      (key === "fetching" && s.step === "fetching_done")
+    );
     if (!found) return "pending";
     if (found.error) return "error";
-    if (found.done || found.step === "photos_done") return "done";
+    if (found.done || found.step === "photos_done" || found.step === "fetching_done") return "done";
     return "active";
   }
 
-  const filtered = sites.filter((s) =>
-    s.business_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const activeSteps  = mode === "google" ? GOOGLE_STEPS  : IMPORT_STEPS;
+  const activeLabels = mode === "google" ? GOOGLE_STEP_LABELS : IMPORT_STEP_LABELS;
+  const filtered     = sites.filter((s) => s.business_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="p-8">
@@ -141,14 +170,44 @@ export default function SitesPage() {
 
       {/* Generator */}
       <div className="bg-[#0d1321] border border-white/6 p-6 mb-6">
-        <p className="text-white/40 text-[10px] tracking-[0.3em] uppercase font-sans mb-3">Generate New Site</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-white/40 text-[10px] tracking-[0.3em] uppercase font-sans">Generate New Site</p>
+          {/* Mode toggle */}
+          <div className="flex items-center bg-white/5 border border-white/8 p-0.5 gap-0.5">
+            <button
+              onClick={() => switchMode("google")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] tracking-[0.15em] uppercase font-semibold transition-colors ${
+                mode === "google" ? "bg-[#d4a853]/15 text-[#d4a853]" : "text-white/30 hover:text-white/60"
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              Google Search
+            </button>
+            <button
+              onClick={() => switchMode("import")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] tracking-[0.15em] uppercase font-semibold transition-colors ${
+                mode === "import" ? "bg-[#d4a853]/15 text-[#d4a853]" : "text-white/30 hover:text-white/60"
+              }`}
+            >
+              <Upload className="w-3 h-3" />
+              Import from URL
+            </button>
+          </div>
+        </div>
+
+        {mode === "import" && (
+          <p className="text-white/25 text-xs font-sans mb-3">
+            Paste the URL of an existing business website — Claude will extract their info and rebuild it in your template.
+          </p>
+        )}
+
         <div className="flex gap-3">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-            placeholder="Business name + city, or Google Maps URL"
+            placeholder={mode === "import" ? "https://oldwebsite.com" : "Business name + city, or Google Maps URL"}
             className="flex-1 bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-4 py-2.5 text-sm font-sans focus:outline-none focus:border-white/30"
           />
           <button
@@ -163,7 +222,7 @@ export default function SitesPage() {
 
         {(running || steps.length > 0) && !result && !error && (
           <div className="mt-4 space-y-2">
-            {STEPS.map((key) => {
+            {activeSteps.map((key) => {
               const status = stepStatus(key);
               return (
                 <div key={key} className="flex items-center gap-2.5">
@@ -171,8 +230,13 @@ export default function SitesPage() {
                   {status === "active"  && <Loader2 className="w-3.5 h-3.5 text-white/50 animate-spin" />}
                   {status === "done"    && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
                   {status === "error"   && <XCircle className="w-3.5 h-3.5 text-red-400" />}
-                  <span className={`text-xs font-sans ${status === "pending" ? "text-white/20" : status === "active" ? "text-white/70" : status === "done" ? "text-white/45" : "text-red-400"}`}>
-                    {STEP_LABELS[key]}{status === "active" && "..."}
+                  <span className={`text-xs font-sans ${
+                    status === "pending" ? "text-white/20" :
+                    status === "active"  ? "text-white/70" :
+                    status === "done"    ? "text-white/45" :
+                    "text-red-400"
+                  }`}>
+                    {activeLabels[key]}{status === "active" && "..."}
                   </span>
                 </div>
               );
@@ -182,14 +246,19 @@ export default function SitesPage() {
 
         {error && (
           <div className="mt-4 flex items-center gap-2 text-red-300 text-sm font-sans">
-            <XCircle className="w-4 h-4" />{error}
+            <XCircle className="w-4 h-4 flex-shrink-0" />{error}
           </div>
         )}
 
         {result && (
           <div className="mt-4 bg-emerald-950/20 border border-emerald-800/30 p-4 flex items-center justify-between">
             <div>
-              <p className="text-emerald-300 text-sm font-sans font-medium">{result.businessName} — {result.photosCount} photos</p>
+              <p className="text-emerald-300 text-sm font-sans font-medium">
+                {result.businessName}
+                {result.photosCount > 0
+                  ? ` — ${result.photosCount} photo${result.photosCount !== 1 ? "s" : ""}`
+                  : " — stock photos used"}
+              </p>
               <p className="text-white/40 text-xs font-sans mt-0.5">{result.previewUrl}</p>
             </div>
             <div className="flex gap-2">

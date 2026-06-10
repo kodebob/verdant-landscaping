@@ -22,6 +22,17 @@ function extractSearchQuery(input: string): string {
   return input.trim();
 }
 
+function parseJson(text: string): Record<string, unknown> | null {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  try { return JSON.parse(cleaned); } catch { /* fall through */ }
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* fall through */ }
+  }
+  return null;
+}
+
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
@@ -192,12 +203,8 @@ RULES:
       });
 
       const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-      const cleaned = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-      let config: Record<string, unknown>;
-      try {
-        config = JSON.parse(cleaned);
-      } catch {
+      const config = parseJson(rawText);
+      if (!config) {
         await send({ step: "error", message: "Failed to parse Claude's response. Please try again." });
         return;
       }
