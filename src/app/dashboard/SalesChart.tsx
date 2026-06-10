@@ -2,7 +2,9 @@
 
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  type TooltipProps,
 } from "recharts";
+import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 interface Props {
   data: { date: string; revenue: number }[];
@@ -42,7 +44,7 @@ export default function SalesChart({ data }: Props) {
             fontSize: 12,
             color: "#fff",
           }}
-          formatter={(v) => [`$${v}`, "Revenue"]}
+          formatter={(v: ValueType) => [`$${v}`, "Revenue"]}
         />
         <Line
           type="monotone"
