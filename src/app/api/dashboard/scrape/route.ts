@@ -197,7 +197,7 @@ RULES:
 - aboutParagraphs: write compelling, specific copy for this type of business. Do NOT use the business name excessively.`;
 
       const response = await anthropic.messages.create({
-        model: "claude-fable-5",
+        model: "claude-sonnet-4-6",
         max_tokens: 4000,
         messages: [{ role: "user", content: prompt }],
       });

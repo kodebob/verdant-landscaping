@@ -170,7 +170,7 @@ RULES:
 - If the page mentions real stats (years in business, # customers, etc), use those`;
 
       const response = await anthropic.messages.create({
-        model: "claude-fable-5",
+        model: "claude-sonnet-4-6",
         max_tokens: 4000,
         messages: [{ role: "user", content: prompt }],
       });
