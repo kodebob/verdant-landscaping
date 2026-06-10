@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
         const res = await fetch(url);
         const data = await res.json();
 
-        if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+        if (data.status === "ZERO_RESULTS" || data.status === "INVALID_REQUEST") break;
+        if (data.status !== "OK") {
           await send({ type: "error", message: `Places API error: ${data.status}` });
           break;
         }
