@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       // ── Step 3: Download photos ────────────────────────────────────────────
       await send({ step: "photos", message: "Pulling photos..." });
 
-      const refs: string[] = (d.photos ?? []).slice(0, 6).map((p: { photo_reference: string }) => p.photo_reference);
+      const refs: string[] = (d.photos ?? []).slice(0, 10).map((p: { photo_reference: string }) => p.photo_reference);
       const photoUrls: string[] = [];
 
       for (const ref of refs) {
@@ -89,9 +89,9 @@ export async function POST(req: NextRequest) {
       // Fill any missing photos with niche-appropriate stock images
       const nicheGuess = (d.types ?? [])
         .filter((t: string) => !["point_of_interest", "establishment"].includes(t))[0] ?? "default";
-      const filledPhotos = fillPhotos(photoUrls, nicheGuess, 6);
+      const filledPhotos = fillPhotos(photoUrls, nicheGuess, 10);
 
-      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}${photoUrls.length < 6 ? ` (${6 - photoUrls.length} stock)` : ""}`, count: filledPhotos.length });
+      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}${photoUrls.length < 10 ? ` (${10 - photoUrls.length} stock)` : ""}`, count: filledPhotos.length });
 
       // ── Step 4: Generate config with Claude ───────────────────────────────
       await send({ step: "config", message: "Generating config..." });

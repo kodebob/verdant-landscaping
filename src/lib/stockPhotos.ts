@@ -91,7 +91,7 @@ const PHOTOS: Record<string, string[]> = {
   ],
 };
 
-export function getStockPhotos(niche: string, count = 6): string[] {
+export function getStockPhotos(niche: string, count = 10): string[] {
   const key = niche.toLowerCase();
   const matched = Object.keys(PHOTOS).find((k) => key.includes(k)) ?? "default";
   const pool = PHOTOS[matched];
@@ -101,7 +101,7 @@ export function getStockPhotos(niche: string, count = 6): string[] {
   return result;
 }
 
-export function fillPhotos(existing: string[], niche: string, needed = 6): string[] {
+export function fillPhotos(existing: string[], niche: string, needed = 10): string[] {
   if (existing.length >= needed) return existing;
   const stock = getStockPhotos(niche, needed);
   const filled = [...existing];
