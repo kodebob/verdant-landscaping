@@ -132,7 +132,7 @@ Description: ${description}
 Business Type: ${types}
 Website: ${d.website ?? ""}
 
-Return ONLY a raw JSON object (no markdown, no explanation) matching this exact structure:
+IMPORTANT: Your entire response must be a single raw JSON object. Start your response with { and end with }. No markdown, no code fences, no explanation before or after.
 
 {
   "businessName": "${d.name}",
@@ -199,13 +199,10 @@ RULES:
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
-        messages: [
-          { role: "user", content: prompt },
-          { role: "assistant", content: "{" },
-        ],
+        messages: [{ role: "user", content: prompt }],
       });
 
-      const rawText = "{" + (response.content[0].type === "text" ? response.content[0].text : "");
+      const rawText = response.content[0].type === "text" ? response.content[0].text : "";
       const config = parseJson(rawText);
       if (!config) {
         await send({ step: "error", message: "Failed to parse Claude's response. Please try again." });

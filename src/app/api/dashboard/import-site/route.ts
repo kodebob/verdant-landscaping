@@ -110,7 +110,7 @@ ORIGINAL WEBSITE: ${normalizedUrl}
 PAGE TEXT (extracted from HTML):
 ${pageText}
 
-Return ONLY a raw JSON object (no markdown, no code block, no explanation) matching this exact structure. Extract REAL info from the page:
+IMPORTANT: Your entire response must be a single raw JSON object. Start your response with { and end with }. No markdown, no code fences, no explanation before or after. Extract REAL info from the page:
 
 {
   "businessName": "...",
@@ -172,13 +172,10 @@ RULES:
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
-        messages: [
-          { role: "user", content: prompt },
-          { role: "assistant", content: "{" },
-        ],
+        messages: [{ role: "user", content: prompt }],
       });
 
-      const rawText = "{" + (response.content[0].type === "text" ? response.content[0].text : "");
+      const rawText = response.content[0].type === "text" ? response.content[0].text : "";
       const config = parseJson(rawText);
 
       if (!config) {

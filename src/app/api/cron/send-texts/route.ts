@@ -76,7 +76,7 @@ Hours: ${hours}
 Description: ${d.editorial_summary?.overview ?? ""}
 Business Type: ${types.join(", ")}
 
-Return ONLY a raw JSON object (no markdown) matching this exact structure:
+IMPORTANT: Your entire response must be a single raw JSON object. Start your response with { and end with }. No markdown, no code fences, no explanation before or after.
 
 {
   "businessName": "${d.name ?? business.name}",
@@ -134,13 +134,10 @@ RULES:
   const response  = await anthropic.messages.create({
     model:      "claude-sonnet-4-6",
     max_tokens: 4000,
-    messages:   [
-      { role: "user", content: prompt },
-      { role: "assistant", content: "{" },
-    ],
+    messages:   [{ role: "user", content: prompt }],
   });
 
-  const raw     = "{" + (response.content[0].type === "text" ? response.content[0].text : "");
+  const raw     = response.content[0].type === "text" ? response.content[0].text : "";
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
   let config: Record<string, unknown>;
