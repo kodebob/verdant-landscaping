@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/send-texts",
+      "schedule": "0 14-22 * * *"
+    }
+  ]
+}

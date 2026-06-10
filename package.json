@@ -19,6 +19,7 @@
     "react-dom": "19.2.4",
     "react-intersection-observer": "^10.0.3",
     "recharts": "^3.8.1",
+    "stripe": "^22.2.0",
     "twilio": "^6.0.2"
   },
   "devDependencies": {

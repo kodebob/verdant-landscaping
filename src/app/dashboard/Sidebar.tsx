@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Search, Globe, Send, MessageSquare, Settings,
+  LayoutDashboard, Search, Globe, Send, MessageSquare, Clock, Settings,
 } from "lucide-react";
 
 const NAV = [
-  { label: "Dashboard",        href: "/dashboard",           icon: LayoutDashboard },
-  { label: "Find Businesses",  href: "/dashboard/find",      icon: Search },
-  { label: "Generated Sites",  href: "/dashboard/sites",     icon: Globe },
-  { label: "Outreach",         href: "/dashboard/outreach",  icon: Send },
-  { label: "Responses",        href: "/dashboard/responses", icon: MessageSquare },
-  { label: "Settings",         href: "/dashboard/settings",  icon: Settings },
+  { label: "Dashboard",        href: "/dashboard",              icon: LayoutDashboard },
+  { label: "Find Businesses",  href: "/dashboard/find",         icon: Search },
+  { label: "Generated Sites",  href: "/dashboard/sites",        icon: Globe },
+  { label: "Outreach",         href: "/dashboard/outreach",     icon: Send },
+  { label: "Responses",        href: "/dashboard/responses",    icon: MessageSquare },
+  { label: "Follow Ups",       href: "/dashboard/follow-ups",   icon: Clock },
+  { label: "Settings",         href: "/dashboard/settings",     icon: Settings },
 ];
 
 export default function Sidebar() {
