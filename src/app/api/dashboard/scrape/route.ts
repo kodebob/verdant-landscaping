@@ -172,7 +172,7 @@ Return ONLY a raw JSON object (no markdown, no explanation) matching this exact 
 }
 
 RULES:
-- Colors: generate a brand-appropriate 11-shade palette for this business type. A plumber might use deep blue, a florist might use rose/pink, a landscaper might use forest green. Use the darkest shade (950) for footer/hero backgrounds.
+- Colors: Generate a UNIQUE brand-appropriate 11-shade palette based on the business type. You MUST pick a hue that matches the industry — do NOT default to navy blue. Examples by type: landscaping/lawn → rich forest green (#1a4d2e range); hardscape/concrete → warm slate/charcoal (#2d3436 range); pressure washing → electric teal (#006d6d range); painting → deep burgundy or terracotta (#6b2737 or #b5451b range); plumbing → steel blue (#1a3a5c is OK here only); roofing → dark brown/espresso (#3b1f0e range); tree service → deep olive green (#3b4a1a range); barber → rich black with gold accents (#1a1a1a range); electrician → deep amber/orange (#7a3b00 range); HVAC → slate grey (#2a3540 range). Generate the full 11 shades (50 through 950) as a proper monochromatic scale. The 950 shade should be very dark and is used for the hero/footer background.
 - Services: infer 3 real specific services from the business type. Use icon names only from: pencil, layoutgrid, treepine, snowflake, wrench, droplets, sun, leaf.
 - processSteps icons use only: messagecircle, filetext, shovel, refreshcw, checkcheck.
 - businessHours: parse from the hours string if available, otherwise write typical hours for this business type.
