@@ -86,12 +86,13 @@ export async function POST(req: NextRequest) {
         if (url) photoUrls.push(url);
       }
 
-      // Fill any missing photos with niche-appropriate stock images
+      // Only use stock photos if Google returned nothing at all
       const nicheGuess = (d.types ?? [])
         .filter((t: string) => !["point_of_interest", "establishment"].includes(t))[0] ?? "default";
-      const filledPhotos = fillPhotos(photoUrls, nicheGuess, 10);
+      const filledPhotos = photoUrls.length > 0 ? photoUrls : fillPhotos([], nicheGuess, 6);
+      const usingStock = photoUrls.length === 0;
 
-      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}${photoUrls.length < 10 ? ` (${10 - photoUrls.length} stock)` : ""}`, count: filledPhotos.length });
+      await send({ step: "photos_done", message: `Pulled ${photoUrls.length} photo${photoUrls.length !== 1 ? "s" : ""}${usingStock ? " (using stock photos)" : ""}`, count: filledPhotos.length });
 
       // ── Step 4: Generate config with Claude ───────────────────────────────
       await send({ step: "config", message: "Generating config..." });
